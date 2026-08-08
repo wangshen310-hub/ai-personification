@@ -9,7 +9,7 @@
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a98a8"/>
     </marker>
     <style>
-      .font { font-family: Inter, Arial, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .font { font-family: Inter, Arial, sans-serif; }
       .title { font-size: 36px; font-weight: 760; letter-spacing: -0.5px; fill: #12263a; }
       .subtitle { font-size: 18px; fill: #647386; }
       .section { font-size: 13px; font-weight: 760; letter-spacing: 1.6px; fill: #6a798a; }
@@ -30,94 +30,87 @@
 
   <g class="font">
     <text x="72" y="68" class="title">AI Personification</text>
-    <text x="72" y="103" class="subtitle">人格状态由运行时维护；模型只提出候选，策略层决定行动</text>
+    <text x="72" y="103" class="subtitle">The runtime maintains personality state; the model proposes and policy decides</text>
 
-    <!-- Input column -->
     <text x="72" y="178" class="section">01  INPUTS</text>
     <rect x="72" y="202" width="246" height="286" rx="14" class="box"/>
-    <text x="102" y="244" class="heading">事件入口</text>
+    <text x="102" y="244" class="heading">Event sources</text>
     <line x1="102" y1="263" x2="288" y2="263" stroke="#d4dce5" stroke-width="1.5"/>
     <circle cx="108" cy="300" r="4" fill="#315d8c"/>
-    <text x="124" y="306" class="body">用户消息</text>
+    <text x="124" y="306" class="body">User messages</text>
     <circle cx="108" cy="344" r="4" fill="#315d8c"/>
-    <text x="124" y="350" class="body">时间与重要日期</text>
+    <text x="124" y="350" class="body">Time and important dates</text>
     <circle cx="108" cy="388" r="4" fill="#315d8c"/>
-    <text x="124" y="394" class="body">暂停、回复与反馈</text>
+    <text x="124" y="394" class="body">Pauses, replies, feedback</text>
     <circle cx="108" cy="432" r="4" fill="#315d8c"/>
-    <text x="124" y="438" class="body">外部通道事件</text>
-    <text x="102" y="466" class="small">先转换为不可变、可去重事件</text>
+    <text x="124" y="438" class="body">External channel events</text>
+    <text x="102" y="466" class="small">Converted into immutable, deduplicated events</text>
 
-    <!-- Runtime -->
     <text x="382" y="178" class="section">02  COMPANION RUNTIME</text>
     <rect x="382" y="202" width="684" height="396" rx="16" class="runtime"/>
-    <text x="416" y="244" class="heading">确定性人格内核</text>
-    <text x="416" y="271" class="small">事实、状态、权限与审计的唯一来源</text>
+    <text x="416" y="244" class="heading">Deterministic personality kernel</text>
+    <text x="416" y="271" class="small">The single source of truth for facts, state, permissions, and audit</text>
     <line x1="416" y1="290" x2="1032" y2="290" stroke="#c9d8e8" stroke-width="1.5"/>
 
     <rect x="416" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="440" y="354" class="heading">事件与时钟</text>
+    <text x="440" y="354" class="heading">Events &amp; clock</text>
     <text x="440" y="380" class="small">reducer · replay</text>
 
     <rect x="630" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="654" y="354" class="heading">状态与需求</text>
-    <text x="654" y="380" class="small">drives · emotion · mood</text>
+    <text x="654" y="354" class="heading">State &amp; drives</text>
+    <text x="654" y="380" class="small">emotion · mood</text>
 
     <rect x="844" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="868" y="354" class="heading">审计与快照</text>
+    <text x="868" y="354" class="heading">Audit &amp; snapshots</text>
     <text x="868" y="380" class="small">audit · persistence</text>
 
     <path d="M604 363 H630" class="accent" marker-end="url(#arrow)"/>
     <path d="M818 363 H844" class="accent" marker-end="url(#arrow)"/>
 
     <rect x="416" y="442" width="616" height="110" rx="11" fill="#ffffff" stroke="#315d8c" stroke-width="2"/>
-    <text x="440" y="479" class="heading">策略闸门</text>
-    <text x="440" y="507" class="body">安全检查 · 权限边界 · 主动联系限制 · 候选评分</text>
-    <text x="440" y="532" class="small">模型不能直接改状态、发消息或执行工具</text>
+    <text x="440" y="479" class="heading">Policy gate</text>
+    <text x="440" y="507" class="body">Safety · permission boundaries · proactive limits · candidate scoring</text>
+    <text x="440" y="532" class="small">The model cannot directly change state, send messages, or run tools</text>
 
     <path d="M510 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
     <path d="M724 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
     <path d="M938 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
 
-    <!-- Model agent -->
     <text x="1160" y="178" class="section">03  MODEL AGENT</text>
     <rect x="1160" y="202" width="268" height="286" rx="14" class="model"/>
-    <text x="1190" y="244" class="heading">模型后端</text>
+    <text x="1190" y="244" class="heading">Model backends</text>
     <line x1="1190" y1="263" x2="1398" y2="263" stroke="#cfe0df" stroke-width="1.5"/>
     <rect x="1190" y="292" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="324" class="body">Ollama · 本地模型</text>
+    <text x="1212" y="324" class="body">Ollama · local model</text>
     <rect x="1190" y="358" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="390" class="body">Codex · 远程 API</text>
-    <text x="1190" y="447" class="small">结构化候选与表达草稿</text>
+    <text x="1212" y="390" class="body">Codex · remote API</text>
+    <text x="1190" y="447" class="small">Structured candidates and drafts</text>
 
-    <!-- Trusted input and model proposal flow -->
     <path d="M318 345 H382" class="accent" marker-end="url(#arrow)"/>
-    <text x="350" y="328" text-anchor="middle" class="label">事件</text>
+    <text x="350" y="328" text-anchor="middle" class="label">events</text>
 
     <path d="M1066 300 H1120 V300 H1160" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="286" text-anchor="middle" class="label">有限上下文</text>
+    <text x="1112" y="286" text-anchor="middle" class="label">bounded context</text>
     <path d="M1160 436 H1120 V436 H1066" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="456" text-anchor="middle" class="label">候选提案</text>
+    <text x="1112" y="456" text-anchor="middle" class="label">proposals</text>
 
-    <!-- Decision/output -->
     <path d="M724 598 V646" class="accent" marker-end="url(#arrow)"/>
-    <text x="752" y="626" class="label">最终决策</text>
+    <text x="752" y="626" class="label">final decision</text>
     <text x="382" y="636" class="section">04  APPROVED OUTCOME</text>
     <rect x="382" y="656" width="684" height="88" rx="14" class="box"/>
-    <text x="416" y="694" class="heading">发送</text>
-    <text x="416" y="720" class="small">仅发送已批准消息</text>
+    <text x="416" y="694" class="heading">Send</text>
+    <text x="416" y="720" class="small">Approved messages only</text>
     <line x1="575" y1="675" x2="575" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="616" y="694" class="heading">等待</text>
-    <text x="616" y="720" class="small">保留用户空间</text>
+    <text x="616" y="694" class="heading">Wait</text>
+    <text x="616" y="720" class="small">Preserve user space</text>
     <line x1="778" y1="675" x2="778" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="820" y="694" class="heading">内部记录</text>
-    <text x="820" y="720" class="small">不打扰用户</text>
+    <text x="820" y="694" class="heading">Internal note</text>
+    <text x="820" y="720" class="small">No user interruption</text>
 
-    <!-- Legend -->
     <line x1="1160" y1="606" x2="1210" y2="606" class="accent" marker-end="url(#arrow)"/>
-    <text x="1224" y="611" class="small">运行时控制流</text>
+    <text x="1224" y="611" class="small">Runtime control flow</text>
     <line x1="1160" y1="638" x2="1210" y2="638" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1224" y="643" class="small">模型提案流</text>
-    <text x="1160" y="704" class="small">原则：模型建议，运行时决定。</text>
-    <text x="1160" y="728" class="small">Principle: model suggests; runtime decides.</text>
+    <text x="1224" y="643" class="small">Model proposal flow</text>
+    <text x="1160" y="704" class="small">Principle: model suggests; runtime decides.</text>
   </g>
 </svg>

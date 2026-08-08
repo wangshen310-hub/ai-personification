@@ -43,7 +43,7 @@ The model may propose “send a check-in,” but it cannot directly change state
 
 ## How it works
 
-![AI Personification system overview](companion-system-architecture.svg)
+![AI Personification system overview](companion-system-architecture-en.svg)
 
 A user message or background time event follows this path:
 
