@@ -33,7 +33,7 @@
 | 部分 | 负责什么 |
 | --- | --- |
 | `Companion Runtime` | 事件、时钟、需求、情绪、状态、策略、安全、审计和重放 |
-| `ModelAdapter` | 调用远程模型 API 或本地模型，理解情境并提出候选意图 |
+| `ModelBackend` | 调用远程模型 API 或本地模型，理解情境并提出候选意图 |
 | 消息适配器 | 接收用户消息，发送已经通过策略批准的行动 |
 
 模型可以提出“我想问候用户”这样的候选，但不能直接修改状态或发送消息。
@@ -64,7 +64,53 @@
 - 校验和快照、事件重放和结构化决策审计；
 - 30/180 天模拟以及 100 组随机不变量测试。
 
-当前版本还没有接入具体 LLM，也不实现长期语义记忆、用户界面或真实消息投递；这些功能会通过独立适配器加入。
+当前版本已经提供 Ollama 本地后端、OpenAI Responses API 后端和 Agent 协调器，但还不实现长期语义记忆、用户界面或真实消息投递；这些功能会通过独立适配器加入。
+
+## 接入模型 Agent
+
+模型是候选生成器，不是人格内核。`AgentRuntime` 会先构造有限上下文，再调用模型生成结构化候选，最后交给
+`PolicyEngine` 决定是否发送。默认 `DIALOGUE_PERMISSIONS` 没有任何工具权限；模型返回的文件、Shell 或外部服务请求只会被记录为阻断请求，不会执行。
+
+完全本地的最小接入方式如下。先在本机启动 Ollama，并准备一个聊天/instruct 模型：
+
+```python
+from datetime import UTC, datetime
+from pathlib import Path
+
+from companion_kernel import AgentRuntime, KernelEvent, PersonalityKernel, create_model_backend
+from companion_kernel.clock import SystemClock
+from companion_kernel.config import ConfigStore, ModelSettings
+from companion_kernel.types import EventKind
+
+config = ConfigStore.defaults()
+settings = ModelSettings(provider="ollama", model="<your-local-model>")
+backend = create_model_backend(settings)
+kernel = PersonalityKernel.open(Path("./runtime"), SystemClock(), config)
+runtime = AgentRuntime(kernel, backend)
+
+result = runtime.handle_event(
+    KernelEvent(
+        "message-1",
+        datetime.now(UTC),
+        EventKind.USER_MESSAGE,
+        {"message": "你好"},
+    )
+)
+print(result.response_text)  # 只有策略选中 SEND_MESSAGE 时才有值
+```
+
+如果使用 Codex 等 OpenAI 模型，将后端改为：
+
+```python
+settings = ModelSettings(
+    provider="openai_responses",
+    model="<openai-codex-model>",
+    base_url="https://api.openai.com/v1",
+)
+```
+
+这种方式仍然让人格状态和策略留在本地，但模型请求会发送到远程 API；要做到完全离线，请使用 Ollama 后端。
+模型服务不可用、输出格式错误或安全检查失败时，运行时会提交事件并降级为不行动。
 
 ## 快速运行
 
@@ -82,6 +128,19 @@ python3 -m venv .venv
 .venv/bin/python -m companion_kernel.simulation --days 180 --seed 42
 ```
 
+启动本地模型对话（以 Ollama 为例）：
+
+```bash
+.venv/bin/companion-chat --provider ollama --model '<your-local-model>'
+```
+
+如使用 Codex 等 OpenAI 模型：
+
+```bash
+OPENAI_API_KEY='...' .venv/bin/companion-chat \\
+  --provider openai_responses --model '<openai-codex-model>'
+```
+
 模拟器默认使用临时目录，因此可以重复运行。正常结果应满足：需求值在 `[0, 1]` 内，边界违规为 `0`。
 
 ## 代码结构
@@ -95,6 +154,13 @@ src/companion_kernel/
 ├── drives.py      # 六需求内稳态引擎
 ├── emotions.py    # 情绪与心境评价
 ├── policy.py      # 硬边界与候选评分
+├── model_backend.py  # 模型上下文、候选协议和后端工厂
+├── ollama_backend.py # Ollama 本地后端
+├── openai_backend.py # OpenAI Responses API 后端
+├── permissions.py # Agent 工具权限配置
+├── safety.py      # 独立的保守安全检查器
+├── agent_runtime.py # 模型、权限和内核协调器
+├── agent_cli.py   # 本地交互式聊天 CLI
 ├── state.py       # 规范化状态与校验和快照
 ├── audit.py       # 结构化决策审计
 ├── kernel.py      # reducer、重放与内核入口
@@ -110,7 +176,7 @@ src/companion_kernel/
 
 ## 后续计划
 
-1. 增加统一的 `ModelAdapter`，接入远程 API、本地模型和混合路由；
+1. 增加更强的安全评估、长期语义记忆和模型路由；
 2. 增加可由用户控制的语义记忆和事件记忆；
 3. 增加后台反思、消息生成和发送反馈适配器；
 4. 增加 Web/App/IM 通道和可视化审计界面。

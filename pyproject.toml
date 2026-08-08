@@ -9,6 +9,9 @@ description = "Deterministic homeostatic kernel for a long-term AI companion"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+companion-chat = "companion_kernel.agent_cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 

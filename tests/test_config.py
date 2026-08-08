@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from companion_kernel.config import ConfigStore, LearnedPersona, SystemPolicy, UserSettings
+from companion_kernel.config import ConfigStore, LearnedPersona, ModelSettings, SystemPolicy, UserSettings
 from companion_kernel.types import ConfigActor, DriveKind
 
 
@@ -17,6 +17,9 @@ def test_model_cannot_modify_any_config_layer() -> None:
 
     with pytest.raises(PermissionError):
         store.replace_learned(LearnedPersona(), ConfigActor.MODEL)
+
+    with pytest.raises(PermissionError):
+        store.replace_model(ModelSettings(model="local"), ConfigActor.MODEL)
 
 
 def test_user_limit_cannot_exceed_system_limit() -> None:
@@ -47,3 +50,9 @@ def test_authorized_layers_accept_valid_replacements() -> None:
 
     assert store.user.timezone == "Asia/Shanghai"
     assert store.learned.drive_weight_offsets == ((DriveKind.CURIOSITY, 0.1),)
+
+
+def test_system_admin_can_select_model_backend() -> None:
+    store = ConfigStore.defaults()
+    store.replace_model(ModelSettings(provider="ollama", model="local-instruct"), ConfigActor.SYSTEM_ADMIN)
+    assert store.model.model == "local-instruct"
