@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L9,4 z" fill="#243447"/>
+    </marker>
+    <marker id="blue-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L9,4 z" fill="#1f5f9f"/>
+    </marker>
+    <style>
+      .font { font-family: Arial, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .title { font-size: 34px; font-weight: 700; fill: #17212b; }
+      .subtitle { font-size: 18px; fill: #536170; }
+      .section { font-size: 17px; font-weight: 700; fill: #253443; }
+      .box-title { font-size: 20px; font-weight: 700; fill: #17212b; }
+      .body { font-size: 16px; fill: #3f4d5b; }
+      .small { font-size: 14px; fill: #637282; }
+      .tiny { font-size: 13px; fill: #667788; }
+      .label { font-size: 14px; font-weight: 700; fill: #1f5f9f; }
+      .number { font-size: 15px; font-weight: 700; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="#ffffff"/>
+  <line x1="70" y1="158" x2="1530" y2="158" stroke="#ccd5df" stroke-width="1.5"/>
+
+  <g class="font">
+    <text x="70" y="68" class="title">AI Personification: Runtime–Model Architecture</text>
+    <text x="70" y="108" class="subtitle">AI 人格化系统：独立运行时维护连续状态，模型 API 负责情境理解与语言生成</text>
+
+    <!-- Column boundaries -->
+    <rect x="70" y="190" width="275" height="525" fill="#f7f9fb" stroke="#aebbc8" stroke-width="1.5"/>
+    <rect x="375" y="190" width="790" height="525" fill="#f5f8fc" stroke="#1f5f9f" stroke-width="2"/>
+    <rect x="1195" y="190" width="335" height="525" fill="#fbfcfd" stroke="#7d8b99" stroke-width="1.5" stroke-dasharray="7 5"/>
+
+    <text x="95" y="225" class="section">External Interfaces 外部接口</text>
+    <text x="400" y="225" class="section">Personality Runtime 人格运行时</text>
+    <text x="1220" y="225" class="section">Model Service 模型服务</text>
+
+    <!-- External column -->
+    <rect x="95" y="260" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
+    <text x="115" y="295" class="box-title">User Channel</text>
+    <text x="115" y="323" class="body">聊天界面 / 消息平台</text>
+    <text x="115" y="347" class="small">user message · pause · reply</text>
+
+    <rect x="95" y="395" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
+    <text x="115" y="430" class="box-title">Scheduler</text>
+    <text x="115" y="458" class="body">时间推进与后台 tick</text>
+    <text x="115" y="482" class="small">silence · date · commitment</text>
+
+    <rect x="95" y="530" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
+    <text x="115" y="565" class="box-title">Channel Adapter</text>
+    <text x="115" y="593" class="body">接收 / 发送已批准行动</text>
+    <text x="115" y="617" class="small">does not choose policy</text>
+
+    <!-- Runtime column -->
+    <rect x="405" y="260" width="730" height="88" fill="#e9f2fb" stroke="#1f5f9f" stroke-width="1.5"/>
+    <circle cx="430" cy="304" r="16" fill="#1f5f9f"/>
+    <text x="430" y="309" text-anchor="middle" class="number">1</text>
+    <text x="460" y="299" class="box-title">Event Normalizer &amp; Clock 事件规范化与时钟</text>
+    <text x="460" y="326" class="body">将外部输入转为不可变、幂等的 KernelEvent；模型不能直接写入事件</text>
+
+    <rect x="405" y="380" width="350" height="190" fill="#ffffff" stroke="#1f5f9f" stroke-width="1.5"/>
+    <circle cx="430" cy="414" r="16" fill="#1f5f9f"/>
+    <text x="430" y="419" text-anchor="middle" class="number">2</text>
+    <text x="460" y="420" class="box-title">State Estimator 状态估计</text>
+    <text x="430" y="459" class="body">六种内稳态需求与紧迫度</text>
+    <text x="430" y="488" class="body">情绪、心境与关系状态</text>
+    <text x="430" y="517" class="body">记忆、暂停、未回复状态</text>
+    <text x="430" y="548" class="small">event log → deterministic reducer</text>
+
+    <rect x="780" y="380" width="325" height="190" fill="#ffffff" stroke="#1f5f9f" stroke-width="1.5"/>
+    <circle cx="805" cy="414" r="16" fill="#1f5f9f"/>
+    <text x="805" y="419" text-anchor="middle" class="number">3</text>
+    <text x="835" y="420" class="box-title">Policy Gate 策略闸门</text>
+    <text x="805" y="459" class="body">硬边界优先于软评分</text>
+    <text x="805" y="488" class="body">暂停、安静时间、限频</text>
+    <text x="805" y="517" class="body">安全不确定 → 拒绝</text>
+    <text x="805" y="548" class="small">send · wait · note · noop</text>
+
+    <rect x="405" y="605" width="700" height="78" fill="#eef7f1" stroke="#4b8664" stroke-width="1.5"/>
+    <circle cx="430" cy="644" r="16" fill="#4b8664"/>
+    <text x="430" y="649" text-anchor="middle" class="number">4</text>
+    <text x="460" y="640" class="box-title">Action Adapter &amp; Audit 行动适配与审计</text>
+    <text x="460" y="666" class="body">只有通过闸门的候选才能进入发送适配器；所有决定可追溯、可重放</text>
+
+    <!-- Model column -->
+    <rect x="1225" y="260" width="275" height="145" fill="#ffffff" stroke="#667789" stroke-width="1.5"/>
+    <text x="1250" y="300" class="box-title">Model Adapter</text>
+    <text x="1250" y="330" class="body">远程 API / 本地模型</text>
+    <text x="1250" y="359" class="body">统一请求与响应协议</text>
+    <text x="1250" y="388" class="small">provider can be replaced</text>
+
+    <rect x="1225" y="445" width="275" height="145" fill="#ffffff" stroke="#667789" stroke-width="1.5"/>
+    <text x="1250" y="485" class="box-title">LLM Inference</text>
+    <text x="1250" y="515" class="body">理解上下文与生成表达</text>
+    <text x="1250" y="544" class="body">返回 CandidateIntent</text>
+    <text x="1250" y="573" class="small">no direct state or send access</text>
+
+    <rect x="1225" y="630" width="275" height="53" fill="#f4f6f8" stroke="#aab5c0" stroke-width="1"/>
+    <text x="1250" y="662" class="small">候选输出仍是不可信输入</text>
+
+    <!-- Flow arrows -->
+    <path d="M320 310 L395 310" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M320 445 L365 445 L365 304 L395 304" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="333" y="290" class="label">event</text>
+
+    <path d="M755 425 L770 425" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="760" y="408" text-anchor="end" class="tiny">state / urgency</text>
+
+    <path d="M1135 304 L1215 304" fill="none" stroke="#1f5f9f" stroke-width="2.5" marker-end="url(#blue-arrow)"/>
+    <text x="1175" y="286" text-anchor="middle" class="label">context</text>
+    <path d="M1215 520 L1135 520" fill="none" stroke="#1f5f9f" stroke-width="2.5" marker-end="url(#blue-arrow)"/>
+    <text x="1175" y="502" text-anchor="middle" class="label">candidates</text>
+
+    <path d="M942 570 L942 595" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M755 625 C720 625 720 520 770 520" fill="none" stroke="#71808f" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+    <text x="690" y="580" class="tiny">policy feedback</text>
+
+    <path d="M405 644 L330 644 L330 580 L320 580" fill="none" stroke="#4b8664" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M320 580 L365 580 L365 644 L395 644" fill="none" stroke="#4b8664" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="335" y="628" text-anchor="end" class="tiny">approved action</text>
+
+    <!-- Storage and notes -->
+    <rect x="70" y="770" width="1460" height="92" fill="#f7f9fb" stroke="#aebbc8" stroke-width="1.5"/>
+    <text x="95" y="806" class="box-title">Persistent State 持久状态</text>
+    <text x="95" y="836" class="body">Append-only Event Log 事件日志</text>
+    <text x="420" y="836" class="body">Checksummed Snapshot 快照</text>
+    <text x="760" y="836" class="body">Decision Audit 决策审计</text>
+    <text x="1070" y="836" class="body">Memory Index 记忆索引（后续模块）</text>
+
+    <line x1="70" y1="900" x2="1530" y2="900" stroke="#ccd5df" stroke-width="1.5"/>
+    <text x="70" y="932" class="small">设计原则：Runtime 是事实来源与权限边界；LLM 是可替换的认知组件。</text>
+    <text x="70" y="958" class="small">Design principle: the runtime owns facts and permissions; the LLM is a replaceable cognition component.</text>
+    <text x="1530" y="932" text-anchor="end" class="tiny">AI Personification · v0.1</text>
+  </g>
+</svg>
