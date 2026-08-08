@@ -1,69 +1,72 @@
 # AI Personification
 
-一个面向长期陪伴型 AI 的确定性人格运行时（deterministic personality runtime）。
-本项目把持续动力、情绪、边界、主动性和审计放在模型之外，由独立软件维护；
-LLM 或本地模型只负责情境理解、候选意图和语言表达。
+[中文](README.md) · [English](README_EN.md)
 
-**状态：** v0.1 核心内核已实现并通过 36 项测试。LLM 接入、长期语义记忆、UI
-和真实消息发送属于后续模块。
+一个让 AI 具备长期连续人格的实验性项目。
 
-## 原理图
+它不把“人格”只写在一段提示词里，而是用一个独立的运行时保存状态、计算需求、
+产生情绪、检查边界，再让语言模型负责理解情境和组织表达。
 
-[打开学术简洁风格部署原理图（SVG）](companion-system-architecture.svg)
+## 这是什么
 
-![AI Personification runtime–model architecture](companion-system-architecture.svg)
+我们希望构建的不是一个“每次聊天都重新开始”的机器人，而是一个能够长期陪伴的系统：
 
-## 核心思想
+- 它能记住关系中的连续变化，而不是只记住几句对话；
+- 它有类似“联结、关怀、好奇、自主、一致性和节律”的内部需求；
+- 需求会积累、缓解和冲突，并影响它是否应该行动；
+- 它可以表达情绪，但不能用情绪操控用户；
+- 它可以主动联系，但必须尊重暂停、安静时间、拒绝和未回复；
+- 更换模型供应商时，核心状态和行为边界仍然保持稳定。
 
-不要把“人格”只写成一段 prompt。Prompt 可以描述风格，但不能可靠地维护跨时间的
-状态、因果、权限和安全边界。本项目将系统拆为两层：
+## 为什么需要独立运行时
 
-| 层 | 职责 |
+提示词适合描述风格，却不适合承担长期状态机。单靠提示词很难可靠地保证：
+
+- 时间经过后状态会怎样变化；
+- 同一个事件重复到达时不会重复产生影响；
+- 高需求不会绕过安全边界；
+- 模型更换后人格不会完全漂移；
+- 每次主动行为都能解释和追溯。
+
+因此，本项目把职责拆开：
+
+| 部分 | 负责什么 |
 | --- | --- |
-| `Companion Runtime` 独立运行时 | 事件、虚拟时钟、六种需求、情绪、状态、策略、安全、审计和重放 |
-| `ModelAdapter` 模型适配层 | 调用远程模型 API 或本地模型，返回结构化候选意图与表达草稿 |
+| `Companion Runtime` | 事件、时钟、需求、情绪、状态、策略、安全、审计和重放 |
+| `ModelAdapter` | 调用远程模型 API 或本地模型，理解情境并提出候选意图 |
+| 消息适配器 | 接收用户消息，发送已经通过策略批准的行动 |
 
-模型没有直接写数据库、修改需求值或发送消息的权限。模型输出必须先经过确定性策略闸门。
+模型可以提出“我想问候用户”这样的候选，但不能直接修改状态或发送消息。
 
-## 运行流程
+## 工作方式
 
-```text
-用户消息 / 定时器
-        ↓
-事件规范化与虚拟时钟
-        ↓
-需求、情绪、记忆和关系状态更新
-        ↓
-组织脱敏上下文，调用远程 API 或本地模型
-        ↓
-模型返回 CandidateIntent
-        ↓
-硬边界检查 → 需求缓解/关系健康/打扰成本评分
-        ↓
-发送、内部记录、等待或拒绝
-        ↓
-写回事件日志、快照和决策审计
-```
+![AI Personification system overview](companion-system-architecture.svg)
 
-## 已实现能力
+一次用户消息或后台时间事件大致经过以下步骤：
 
-- 事件日志、幂等事件处理和 UTC 虚拟时钟
-- 六种有界需求：联结、关怀、好奇、自主、一致性、节律/负荷
-- 确定性情绪评价和缓慢心境移动平均
-- 配置权限：系统策略、用户设置、学习人格分层
-- 硬边界优先：暂停、安静时间、频率上限、未回复锁定、安全不确定即拒绝
-- 校验和快照、事件重放和结构化决策审计
-- 30/180 天长期模拟与 100 组随机不变量扫描
+1. 输入被转换成不可变、可去重的事件；
+2. 运行时推进虚拟时钟，更新六种需求和情绪状态；
+3. 系统整理必要的上下文，再调用模型生成一个或多个结构化候选；
+4. 策略层先检查硬边界，再比较需求缓解、关系健康、风险和打扰成本；
+5. 系统选择发送、内部记录、等待或拒绝，并把结果写入事件日志和审计日志。
 
-## 安全与信任边界
+后台主动联系遵循同一条路径。没有显著需求时，系统可以什么也不做；用户未回复一次主动消息后，
+主动联系会锁定，直到用户再次回应。
 
-`PersonalityKernel.process()` 只接受宿主认证并规范化后的事件。模型文本不能直接构造
-`KernelEvent`；模型建议只能映射为 `CandidateIntent`，并继续经过策略闸门。
+## 当前版本已经实现
 
-主动/响应模式由可信事件类型决定，不能由候选意图自报。安全评估缺失、超时或不确定时，
-候选默认失败关闭。当前版本不实现外部工具操作、真实消息投递或自然语言安全分类。
+- UTC 虚拟时钟和幂等事件日志；
+- 六种有界需求与持续缺口计算；
+- 确定性情绪评价和缓慢心境变化；
+- 系统、用户、学习人格三层配置权限；
+- 暂停、安静时间、24 小时频率上限和未回复锁定；
+- 安全信号缺失时失败关闭；
+- 校验和快照、事件重放和结构化决策审计；
+- 30/180 天模拟以及 100 组随机不变量测试。
 
-## 快速开始
+当前版本还没有接入具体 LLM，也不实现长期语义记忆、用户界面或真实消息投递；这些功能会通过独立适配器加入。
+
+## 快速运行
 
 需要 Python 3.12 或更高版本。
 
@@ -73,13 +76,13 @@ python3 -m venv .venv
 .venv/bin/python -m pytest -q -W error
 ```
 
-运行长期模拟：
+运行 180 天模拟：
 
 ```bash
 .venv/bin/python -m companion_kernel.simulation --days 180 --seed 42
 ```
 
-模拟器默认使用临时运行目录，因此可以重复执行。结果应保持需求值在 `[0, 1]`，且边界违规为 `0`。
+模拟器默认使用临时目录，因此可以重复运行。正常结果应满足：需求值在 `[0, 1]` 内，边界违规为 `0`。
 
 ## 代码结构
 
@@ -98,135 +101,20 @@ src/companion_kernel/
 └── simulation.py  # 长期模拟与 CLI
 ```
 
-## 后续模块
+## 安全边界
 
-1. `ModelAdapter`：为远程 API、本地模型和混合路由定义统一接口。
-2. 记忆服务：语义记忆、事件记忆、用户控制和冲突确认。
-3. 后台反思与主动联系：低频调度、消息生成和发送反馈适配器。
-4. Web/App/IM 通道与可视化审计界面。
+模型输出是不可信的候选输入，必须经过运行时策略闸门。模型不能直接构造核心事件、改写需求、
+关闭安全策略或获得外部工具权限。主动/响应模式由可信事件类型决定，不能由模型自报。
+
+系统禁止用内疚、威胁、嫉妒、虚假脆弱、自伤暗示或排他性依赖来换取用户回复。
+
+## 后续计划
+
+1. 增加统一的 `ModelAdapter`，接入远程 API、本地模型和混合路由；
+2. 增加可由用户控制的语义记忆和事件记忆；
+3. 增加后台反思、消息生成和发送反馈适配器；
+4. 增加 Web/App/IM 通道和可视化审计界面。
 
 ## 许可证
 
-当前仓库尚未选择开源许可证。代码可以公开查看，但在添加许可证文件前，版权仍归作者所有。
-
----
-
-# English
-
-AI Personification is a deterministic personality runtime for long-term companion AI.
-It keeps persistent drives, affect, boundaries, proactive behavior, and auditability
-outside the language model. A remote LLM API or a local model is used for contextual
-reasoning, candidate intentions, and language generation.
-
-**Status:** v0.1 of the deterministic kernel is implemented and validated by 36 tests.
-LLM integration, semantic memory, user interfaces, and real message delivery are planned
-as separate modules.
-
-## Architecture diagram
-
-[Open the academic-style runtime–model diagram (SVG)](companion-system-architecture.svg)
-
-![AI Personification runtime–model architecture](companion-system-architecture.svg)
-
-## Design principle
-
-Personality should not be reduced to a prompt. A prompt can describe style, but it cannot
-reliably maintain state, causality, permissions, and safety across time. The system is
-split into two layers:
-
-| Layer | Responsibility |
-| --- | --- |
-| `Companion Runtime` | Events, virtual time, six drives, affect, state, policy, safety, audit, and replay |
-| `ModelAdapter` | Calls a remote model API or local model and returns structured candidate intents and drafts |
-
-The model cannot write the state store, change drive values, or send messages directly.
-Every model proposal passes through the deterministic policy gate.
-
-## Execution flow
-
-```text
-User message / scheduler tick
-          ↓
-Event normalization and virtual clock
-          ↓
-Update drives, affect, memory, and relationship state
-          ↓
-Build a bounded context and call a remote or local model
-          ↓
-Model returns CandidateIntent
-          ↓
-Hard-boundary checks → relief/relationship/intrusion scoring
-          ↓
-Send, write an internal note, wait, or reject
-          ↓
-Append event, snapshot, and decision audit
-```
-
-## Implemented
-
-- Append-only events, idempotency, and a UTC fake clock
-- Six bounded drives: connection, care, curiosity, autonomy, coherence, and rhythm/load
-- Deterministic emotion appraisal and slow mood moving average
-- Layered configuration authority for system, user, and learned persona settings
-- Hard-boundary-first policy: pause, quiet hours, rate limit, unanswered-message lock, and fail-closed safety
-- Checksummed snapshots, event replay, structured decision audit, and long-run simulation
-- 30/180-day simulations plus a 100-seed invariant sweep
-
-## Safety and trust boundary
-
-`PersonalityKernel.process()` accepts only host-authenticated, normalized events. Model text
-must never construct `KernelEvent`; model suggestions may only be mapped to `CandidateIntent`
-and still pass through the policy gate.
-
-Proactive-versus-reactive mode is derived from the trusted event kind, not self-declared by
-the candidate. Missing, timed-out, or uncertain safety assessments fail closed. This version
-does not implement external tool actions, real message delivery, or natural-language safety
-classification.
-
-## Quick start
-
-Python 3.12 or newer is required.
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m pytest -q -W error
-```
-
-Run a longitudinal simulation:
-
-```bash
-.venv/bin/python -m companion_kernel.simulation --days 180 --seed 42
-```
-
-The simulator uses a temporary runtime directory by default, so repeated runs are isolated.
-Drive values should remain in `[0, 1]` and boundary violations should remain `0`.
-
-## Repository layout
-
-```text
-src/companion_kernel/
-├── types.py       # Shared enums
-├── config.py      # Configuration layers and write authority
-├── clock.py       # System clock and FakeClock
-├── events.py      # Immutable events and JSONL event store
-├── drives.py      # Six-drive homeostasis engine
-├── emotions.py    # Emotion and mood appraisal
-├── policy.py      # Hard boundaries and candidate scoring
-├── state.py       # Canonical state and checksummed snapshots
-├── audit.py       # Structured decision audit
-├── kernel.py      # Reducer, replay, and runtime entry point
-└── simulation.py  # Longitudinal simulator and CLI
-```
-
-## Roadmap
-
-1. `ModelAdapter`: one interface for remote APIs, local models, and hybrid routing.
-2. Memory service: semantic/episodic memory, user controls, and conflict confirmation.
-3. Background reflection and proactive contact with delivery feedback.
-4. Web, mobile, and messaging channels plus an audit UI.
-
-## License
-
-No open-source license has been selected yet. The source is publicly readable, but copyright
-remains with the author until a license file is added.
+当前仓库尚未选择开源许可证。代码已经公开，但在加入许可证文件前，版权仍归作者所有。
