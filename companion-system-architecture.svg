@@ -1,136 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820">
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
-      <path d="M0,0 L0,8 L9,4 z" fill="#243447"/>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#536273"/>
     </marker>
-    <marker id="blue-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
-      <path d="M0,0 L0,8 L9,4 z" fill="#1f5f9f"/>
+    <marker id="blue-arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#2f6fed"/>
     </marker>
     <style>
       .font { font-family: Arial, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
-      .title { font-size: 34px; font-weight: 700; fill: #17212b; }
-      .subtitle { font-size: 18px; fill: #536170; }
-      .section { font-size: 17px; font-weight: 700; fill: #253443; }
-      .box-title { font-size: 20px; font-weight: 700; fill: #17212b; }
-      .body { font-size: 16px; fill: #3f4d5b; }
-      .small { font-size: 14px; fill: #637282; }
-      .tiny { font-size: 13px; fill: #667788; }
-      .label { font-size: 14px; font-weight: 700; fill: #1f5f9f; }
-      .number { font-size: 15px; font-weight: 700; fill: #ffffff; }
+      .title { font-size: 38px; font-weight: 800; fill: #152238; }
+      .subtitle { font-size: 20px; fill: #59687a; }
+      .heading { font-size: 23px; font-weight: 800; fill: #152238; }
+      .body { font-size: 18px; fill: #3f4d5e; }
+      .small { font-size: 15px; fill: #718094; }
+      .label { font-size: 15px; font-weight: 700; fill: #2f6fed; }
+      .number { font-size: 16px; font-weight: 800; fill: #ffffff; }
     </style>
   </defs>
 
-  <rect width="1600" height="980" fill="#ffffff"/>
-  <line x1="70" y1="158" x2="1530" y2="158" stroke="#ccd5df" stroke-width="1.5"/>
+  <rect width="1500" height="820" fill="#ffffff"/>
+  <circle cx="750" cy="405" r="280" fill="#f4f7fb"/>
 
   <g class="font">
-    <text x="70" y="68" class="title">AI Personification: Runtime–Model Architecture</text>
-    <text x="70" y="108" class="subtitle">AI 人格化系统：独立运行时维护连续状态，模型 API 负责情境理解与语言生成</text>
+    <text x="70" y="72" class="title">AI Personification</text>
+    <text x="70" y="112" class="subtitle">独立运行时维护连续人格，模型负责理解情境与组织表达</text>
 
-    <!-- Column boundaries -->
-    <rect x="70" y="190" width="275" height="525" fill="#f7f9fb" stroke="#aebbc8" stroke-width="1.5"/>
-    <rect x="375" y="190" width="790" height="525" fill="#f5f8fc" stroke="#1f5f9f" stroke-width="2"/>
-    <rect x="1195" y="190" width="335" height="525" fill="#fbfcfd" stroke="#7d8b99" stroke-width="1.5" stroke-dasharray="7 5"/>
+    <!-- Main flow cards -->
+    <rect x="70" y="220" width="260" height="250" rx="28" fill="#fff7e8" stroke="#f0b44d" stroke-width="3"/>
+    <text x="105" y="270" class="heading">用户与时间</text>
+    <text x="105" y="314" class="body">聊天消息</text>
+    <text x="105" y="348" class="body">暂停与回复</text>
+    <text x="105" y="382" class="body">沉默与重要日期</text>
+    <text x="105" y="430" class="small">所有输入先变成事件</text>
 
-    <text x="95" y="225" class="section">External Interfaces 外部接口</text>
-    <text x="400" y="225" class="section">Personality Runtime 人格运行时</text>
-    <text x="1220" y="225" class="section">Model Service 模型服务</text>
+    <rect x="425" y="175" width="650" height="360" rx="34" fill="#eef5ff" stroke="#2f6fed" stroke-width="4"/>
+    <text x="470" y="232" class="heading">Companion Runtime</text>
+    <text x="470" y="264" class="small">独立软件：事实、状态和权限的唯一来源</text>
 
-    <!-- External column -->
-    <rect x="95" y="260" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
-    <text x="115" y="295" class="box-title">User Channel</text>
-    <text x="115" y="323" class="body">聊天界面 / 消息平台</text>
-    <text x="115" y="347" class="small">user message · pause · reply</text>
+    <rect x="470" y="300" width="250" height="82" rx="18" fill="#ffffff" stroke="#9cb7df" stroke-width="2"/>
+    <text x="495" y="335" class="heading">状态</text>
+    <text x="495" y="362" class="small">需求 · 情绪 · 记忆 · 时钟</text>
 
-    <rect x="95" y="395" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
-    <text x="115" y="430" class="box-title">Scheduler</text>
-    <text x="115" y="458" class="body">时间推进与后台 tick</text>
-    <text x="115" y="482" class="small">silence · date · commitment</text>
+    <rect x="780" y="300" width="250" height="82" rx="18" fill="#ffffff" stroke="#9cb7df" stroke-width="2"/>
+    <text x="805" y="335" class="heading">策略</text>
+    <text x="805" y="362" class="small">安全 · 限频 · 是否行动</text>
 
-    <rect x="95" y="530" width="225" height="100" fill="#ffffff" stroke="#71808f" stroke-width="1.5"/>
-    <text x="115" y="565" class="box-title">Channel Adapter</text>
-    <text x="115" y="593" class="body">接收 / 发送已批准行动</text>
-    <text x="115" y="617" class="small">does not choose policy</text>
+    <rect x="470" y="410" width="560" height="82" rx="18" fill="#ffffff" stroke="#9cb7df" stroke-width="2"/>
+    <text x="495" y="445" class="heading">结果</text>
+    <text x="495" y="472" class="small">发送 · 内部记录 · 等待 · 拒绝，并写入审计</text>
 
-    <!-- Runtime column -->
-    <rect x="405" y="260" width="730" height="88" fill="#e9f2fb" stroke="#1f5f9f" stroke-width="1.5"/>
-    <circle cx="430" cy="304" r="16" fill="#1f5f9f"/>
-    <text x="430" y="309" text-anchor="middle" class="number">1</text>
-    <text x="460" y="299" class="box-title">Event Normalizer &amp; Clock 事件规范化与时钟</text>
-    <text x="460" y="326" class="body">将外部输入转为不可变、幂等的 KernelEvent；模型不能直接写入事件</text>
+    <rect x="1170" y="220" width="260" height="250" rx="28" fill="#edf9f1" stroke="#54ad72" stroke-width="3"/>
+    <text x="1205" y="270" class="heading">模型 API</text>
+    <text x="1205" y="314" class="body">理解当前语境</text>
+    <text x="1205" y="348" class="body">提出候选意图</text>
+    <text x="1205" y="382" class="body">生成表达草稿</text>
+    <text x="1205" y="430" class="small">不能直接改状态或发消息</text>
 
-    <rect x="405" y="380" width="350" height="190" fill="#ffffff" stroke="#1f5f9f" stroke-width="1.5"/>
-    <circle cx="430" cy="414" r="16" fill="#1f5f9f"/>
-    <text x="430" y="419" text-anchor="middle" class="number">2</text>
-    <text x="460" y="420" class="box-title">State Estimator 状态估计</text>
-    <text x="430" y="459" class="body">六种内稳态需求与紧迫度</text>
-    <text x="430" y="488" class="body">情绪、心境与关系状态</text>
-    <text x="430" y="517" class="body">记忆、暂停、未回复状态</text>
-    <text x="430" y="548" class="small">event log → deterministic reducer</text>
+    <!-- Flow -->
+    <circle cx="375" cy="345" r="19" fill="#f0a52b"/>
+    <text x="375" y="351" text-anchor="middle" class="number">1</text>
+    <path d="M330 345 L405 345" fill="none" stroke="#536273" stroke-width="4" marker-end="url(#arrow)"/>
+    <text x="367" y="322" text-anchor="middle" class="label">事件</text>
 
-    <rect x="780" y="380" width="325" height="190" fill="#ffffff" stroke="#1f5f9f" stroke-width="1.5"/>
-    <circle cx="805" cy="414" r="16" fill="#1f5f9f"/>
-    <text x="805" y="419" text-anchor="middle" class="number">3</text>
-    <text x="835" y="420" class="box-title">Policy Gate 策略闸门</text>
-    <text x="805" y="459" class="body">硬边界优先于软评分</text>
-    <text x="805" y="488" class="body">暂停、安静时间、限频</text>
-    <text x="805" y="517" class="body">安全不确定 → 拒绝</text>
-    <text x="805" y="548" class="small">send · wait · note · noop</text>
+    <circle cx="1120" cy="345" r="19" fill="#2f6fed"/>
+    <text x="1120" y="351" text-anchor="middle" class="number">2</text>
+    <path d="M1075 320 L1150 320" fill="none" stroke="#2f6fed" stroke-width="4" marker-end="url(#blue-arrow)"/>
+    <text x="1113" y="296" text-anchor="middle" class="label">上下文</text>
+    <path d="M1150 405 L1075 405" fill="none" stroke="#2f6fed" stroke-width="4" marker-end="url(#blue-arrow)"/>
+    <text x="1113" y="432" text-anchor="middle" class="label">候选</text>
 
-    <rect x="405" y="605" width="700" height="78" fill="#eef7f1" stroke="#4b8664" stroke-width="1.5"/>
-    <circle cx="430" cy="644" r="16" fill="#4b8664"/>
-    <text x="430" y="649" text-anchor="middle" class="number">4</text>
-    <text x="460" y="640" class="box-title">Action Adapter &amp; Audit 行动适配与审计</text>
-    <text x="460" y="666" class="body">只有通过闸门的候选才能进入发送适配器；所有决定可追溯、可重放</text>
+    <circle cx="750" cy="590" r="19" fill="#2f6fed"/>
+    <text x="750" y="596" text-anchor="middle" class="number">3</text>
+    <path d="M750 535 L750 650" fill="none" stroke="#536273" stroke-width="4" marker-end="url(#arrow)"/>
+    <text x="775" y="610" class="label">策略决定</text>
 
-    <!-- Model column -->
-    <rect x="1225" y="260" width="275" height="145" fill="#ffffff" stroke="#667789" stroke-width="1.5"/>
-    <text x="1250" y="300" class="box-title">Model Adapter</text>
-    <text x="1250" y="330" class="body">远程 API / 本地模型</text>
-    <text x="1250" y="359" class="body">统一请求与响应协议</text>
-    <text x="1250" y="388" class="small">provider can be replaced</text>
+    <!-- Outcome cards -->
+    <rect x="420" y="665" width="210" height="78" rx="18" fill="#f4f7fb" stroke="#c5cfdb" stroke-width="2"/>
+    <text x="455" y="700" class="heading">发送</text>
+    <text x="455" y="725" class="small">仅限批准的消息</text>
 
-    <rect x="1225" y="445" width="275" height="145" fill="#ffffff" stroke="#667789" stroke-width="1.5"/>
-    <text x="1250" y="485" class="box-title">LLM Inference</text>
-    <text x="1250" y="515" class="body">理解上下文与生成表达</text>
-    <text x="1250" y="544" class="body">返回 CandidateIntent</text>
-    <text x="1250" y="573" class="small">no direct state or send access</text>
+    <rect x="645" y="665" width="210" height="78" rx="18" fill="#f4f7fb" stroke="#c5cfdb" stroke-width="2"/>
+    <text x="680" y="700" class="heading">等待</text>
+    <text x="680" y="725" class="small">保留用户空间</text>
 
-    <rect x="1225" y="630" width="275" height="53" fill="#f4f6f8" stroke="#aab5c0" stroke-width="1"/>
-    <text x="1250" y="662" class="small">候选输出仍是不可信输入</text>
+    <rect x="870" y="665" width="210" height="78" rx="18" fill="#f4f7fb" stroke="#c5cfdb" stroke-width="2"/>
+    <text x="905" y="700" class="heading">内部记录</text>
+    <text x="905" y="725" class="small">不打扰用户</text>
 
-    <!-- Flow arrows -->
-    <path d="M320 310 L395 310" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
-    <path d="M320 445 L365 445 L365 304 L395 304" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
-    <text x="333" y="290" class="label">event</text>
-
-    <path d="M755 425 L770 425" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
-    <text x="760" y="408" text-anchor="end" class="tiny">state / urgency</text>
-
-    <path d="M1135 304 L1215 304" fill="none" stroke="#1f5f9f" stroke-width="2.5" marker-end="url(#blue-arrow)"/>
-    <text x="1175" y="286" text-anchor="middle" class="label">context</text>
-    <path d="M1215 520 L1135 520" fill="none" stroke="#1f5f9f" stroke-width="2.5" marker-end="url(#blue-arrow)"/>
-    <text x="1175" y="502" text-anchor="middle" class="label">candidates</text>
-
-    <path d="M942 570 L942 595" fill="none" stroke="#243447" stroke-width="2" marker-end="url(#arrow)"/>
-    <path d="M755 625 C720 625 720 520 770 520" fill="none" stroke="#71808f" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
-    <text x="690" y="580" class="tiny">policy feedback</text>
-
-    <path d="M405 644 L330 644 L330 580 L320 580" fill="none" stroke="#4b8664" stroke-width="2" marker-end="url(#arrow)"/>
-    <path d="M320 580 L365 580 L365 644 L395 644" fill="none" stroke="#4b8664" stroke-width="2" marker-end="url(#arrow)"/>
-    <text x="335" y="628" text-anchor="end" class="tiny">approved action</text>
-
-    <!-- Storage and notes -->
-    <rect x="70" y="770" width="1460" height="92" fill="#f7f9fb" stroke="#aebbc8" stroke-width="1.5"/>
-    <text x="95" y="806" class="box-title">Persistent State 持久状态</text>
-    <text x="95" y="836" class="body">Append-only Event Log 事件日志</text>
-    <text x="420" y="836" class="body">Checksummed Snapshot 快照</text>
-    <text x="760" y="836" class="body">Decision Audit 决策审计</text>
-    <text x="1070" y="836" class="body">Memory Index 记忆索引（后续模块）</text>
-
-    <line x1="70" y1="900" x2="1530" y2="900" stroke="#ccd5df" stroke-width="1.5"/>
-    <text x="70" y="932" class="small">设计原则：Runtime 是事实来源与权限边界；LLM 是可替换的认知组件。</text>
-    <text x="70" y="958" class="small">Design principle: the runtime owns facts and permissions; the LLM is a replaceable cognition component.</text>
-    <text x="1530" y="932" text-anchor="end" class="tiny">AI Personification · v0.1</text>
+    <!-- Footer -->
+    <line x1="70" y1="780" x2="1430" y2="780" stroke="#d8e0e8" stroke-width="2"/>
+    <text x="70" y="807" class="small">核心原则：模型提出建议，运行时做决定。</text>
+    <text x="1430" y="807" text-anchor="end" class="small">Model suggests · Runtime decides</text>
   </g>
 </svg>
