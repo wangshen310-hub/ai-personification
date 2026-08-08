@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+import subprocess
+import sys
 
 from companion_kernel.simulation import SimulationRunner
 
@@ -30,3 +32,14 @@ def test_same_seed_produces_same_final_digest(tmp_path) -> None:
     first = SimulationRunner(tmp_path / "first", START, seed=42).run(30, 3)
     second = SimulationRunner(tmp_path / "second", START, seed=42).run(30, 3)
     assert first.final_state_digest == second.final_state_digest
+
+
+def test_cli_does_not_preload_its_own_module() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "companion_kernel.simulation", "--days", "2", "--seed", "1"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "RuntimeWarning" not in result.stderr

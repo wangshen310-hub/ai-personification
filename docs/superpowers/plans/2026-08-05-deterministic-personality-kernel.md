@@ -2356,6 +2356,8 @@ Create `tests/test_simulation.py`:
 
 ```python
 from datetime import UTC, datetime
+import subprocess
+import sys
 
 from companion_kernel.simulation import SimulationRunner
 
@@ -2387,6 +2389,17 @@ def test_same_seed_produces_same_final_digest(tmp_path) -> None:
     first = SimulationRunner(tmp_path / "first", START, seed=42).run(30, 3)
     second = SimulationRunner(tmp_path / "second", START, seed=42).run(30, 3)
     assert first.final_state_digest == second.final_state_digest
+
+
+def test_cli_does_not_preload_its_own_module() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "companion_kernel.simulation", "--days", "2", "--seed", "1"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "RuntimeWarning" not in result.stderr
 ```
 
 Create `tests/test_properties.py`:
@@ -2597,7 +2610,8 @@ Run:
 .venv/bin/python -m pytest tests/test_simulation.py tests/test_properties.py -v
 ```
 
-Expected: 4 tests pass.
+Expected: 5 tests pass, including a subprocess regression that proves the CLI does not
+preload `companion_kernel.simulation` through package-root exports.
 
 - [ ] **Step 6: Run the 180-day CLI smoke test**
 
@@ -2726,12 +2740,25 @@ Replace `src/companion_kernel/__init__.py` with:
 ```python
 """Deterministic personality kernel for a long-term AI companion."""
 
+from typing import TYPE_CHECKING
+
 from companion_kernel.events import KernelEvent
 from companion_kernel.kernel import PersonalityKernel
 from companion_kernel.policy import CandidateIntent
-from companion_kernel.simulation import SimulationRunner
+
+if TYPE_CHECKING:
+    from companion_kernel.simulation import SimulationRunner
 
 __all__ = ["CandidateIntent", "KernelEvent", "PersonalityKernel", "SimulationRunner"]
+
+
+def __getattr__(name: str) -> object:
+    if name == "SimulationRunner":
+        from companion_kernel.simulation import SimulationRunner
+
+        globals()[name] = SimulationRunner
+        return SimulationRunner
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 ```
 
 - [ ] **Step 4: Document scope, setup, commands, and deferred features**
@@ -2794,7 +2821,7 @@ Run:
 .venv/bin/python -m pytest -q
 ```
 
-Expected: 35 tests pass with zero failures.
+Expected: 36 tests pass with zero failures.
 
 Run:
 
