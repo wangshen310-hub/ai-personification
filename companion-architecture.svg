@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07101f"/>
+      <stop offset="1" stop-color="#111a31"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.32"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#8291aa"/>
+    </marker>
+    <marker id="violetArrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#9b9cff"/>
+    </marker>
+    <style>
+      .font { font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .title { font-size: 42px; font-weight: 800; fill: #f4f7ff; }
+      .sub { font-size: 22px; fill: #aab7ca; }
+      .eyebrow { font-size: 17px; font-weight: 700; letter-spacing: 2px; fill: #94a3b8; }
+      .box-title { font-size: 27px; font-weight: 800; fill: #edf2ff; }
+      .body { font-size: 18px; fill: #bdc8da; }
+      .small { font-size: 16px; fill: #98a7bc; }
+      .pill { font-size: 17px; font-weight: 700; fill: #e5e7ff; }
+      .number { font-size: 18px; font-weight: 800; fill: #07101f; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1060" fill="url(#bg)"/>
+  <circle cx="760" cy="360" r="360" fill="#6267ff" opacity="0.045"/>
+
+  <g class="font">
+    <text x="90" y="78" class="eyebrow">长期陪伴人格 · 总体架构</text>
+    <text x="90" y="132" class="title">让“需求”产生行动，而不是让提示词扮演需求</text>
+    <text x="90" y="174" class="sub">LLM 是思考与表达层；持续的动力、边界和记忆由模型外的运行时维护。</text>
+
+    <!-- Step 1 -->
+    <text x="90" y="235" class="eyebrow">外部世界与时间</text>
+    <rect x="90" y="258" width="310" height="190" rx="24" fill="#142033" stroke="#40506a" stroke-width="2" filter="url(#shadow)"/>
+    <circle cx="125" cy="294" r="17" fill="#94a3b8"/>
+    <text x="125" y="301" text-anchor="middle" class="number">1</text>
+    <text x="155" y="304" class="box-title">事件输入</text>
+    <text x="125" y="350" class="body">用户消息 · 沉默时长</text>
+    <text x="125" y="381" class="body">重要日期 · 关系变化</text>
+    <text x="125" y="414" class="small">这些事实先被解释，再改变内部状态</text>
+
+    <!-- Step 2 -->
+    <text x="478" y="235" class="eyebrow" fill="#b8b9ff">模型外 · 虚拟生理层</text>
+    <rect x="478" y="258" width="630" height="340" rx="28" fill="#1c1e49" stroke="#7477ff" stroke-width="3" filter="url(#shadow)"/>
+    <circle cx="518" cy="298" r="17" fill="#9b9cff"/>
+    <text x="518" y="305" text-anchor="middle" class="number">2</text>
+    <text x="550" y="309" class="box-title">虚拟内稳态驱动引擎</text>
+    <text x="518" y="350" class="body">持续计算目标区间、当前缺口、持续时间和紧迫度</text>
+
+    <g>
+      <rect x="518" y="382" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="601" y="408" text-anchor="middle" class="pill">联结</text><text x="601" y="431" text-anchor="middle" class="small">有意义的联系</text>
+      <rect x="700" y="382" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="783" y="408" text-anchor="middle" class="pill">关怀</text><text x="783" y="431" text-anchor="middle" class="small">用户长期福祉</text>
+      <rect x="882" y="382" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="965" y="408" text-anchor="middle" class="pill">好奇</text><text x="965" y="431" text-anchor="middle" class="small">理解人与世界</text>
+      <rect x="518" y="462" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="601" y="488" text-anchor="middle" class="pill">自主</text><text x="601" y="511" text-anchor="middle" class="small">保留观点与边界</text>
+      <rect x="700" y="462" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="783" y="488" text-anchor="middle" class="pill">一致性</text><text x="783" y="511" text-anchor="middle" class="small">身份与承诺连续</text>
+      <rect x="882" y="462" width="166" height="62" rx="15" fill="#2a2d67" stroke="#8789ff"/>
+      <text x="965" y="488" text-anchor="middle" class="pill">认知负荷</text><text x="965" y="511" text-anchor="middle" class="small">节制与安静空间</text>
+    </g>
+    <text x="783" y="565" text-anchor="middle" class="small" fill="#c3c4ff">输出：当前张力、需求冲突、优先级与可接受的满足方式</text>
+
+    <!-- Step 3 -->
+    <text x="1180" y="235" class="eyebrow" fill="#91dbff">LLM · 认知与表达层</text>
+    <rect x="1180" y="258" width="330" height="340" rx="28" fill="#102b41" stroke="#42c3ff" stroke-width="3" filter="url(#shadow)"/>
+    <circle cx="1220" cy="298" r="17" fill="#7dd3fc"/>
+    <text x="1220" y="305" text-anchor="middle" class="number">3</text>
+    <text x="1252" y="309" class="box-title">情境思考器</text>
+    <text x="1220" y="364" class="body">理解当前处境</text>
+    <text x="1220" y="404" class="body">预测用户可能的感受</text>
+    <text x="1220" y="444" class="body">想象多种未来</text>
+    <text x="1220" y="484" class="body">生成候选意图与表达</text>
+    <line x1="1220" y1="520" x2="1470" y2="520" stroke="#3f5a70"/>
+    <text x="1345" y="552" text-anchor="middle" class="small" fill="#91dbff">只能回应需求</text>
+    <text x="1345" y="577" text-anchor="middle" class="small" fill="#91dbff">不能直接篡改需求</text>
+
+    <!-- Arrows top -->
+    <path d="M400 353 L465 353" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
+    <path d="M1108 428 L1167 428" stroke="#9b9cff" stroke-width="4" marker-end="url(#violetArrow)"/>
+
+    <!-- Memory and gate -->
+    <rect x="90" y="662" width="430" height="190" rx="24" fill="#172131" stroke="#718096" stroke-width="2" filter="url(#shadow)"/>
+    <text x="130" y="708" class="box-title">人格与长期记忆</text>
+    <text x="130" y="750" class="body">核心价值 · 自我叙事 · 承诺</text>
+    <text x="130" y="785" class="body">事件记忆 · 用户模型 · 关系阶段</text>
+    <text x="130" y="821" class="small">偏好缓慢学习；重大变化需要明确确认</text>
+
+    <rect x="566" y="662" width="944" height="190" rx="24" fill="#36192a" stroke="#f378b6" stroke-width="3" filter="url(#shadow)"/>
+    <circle cx="608" cy="705" r="17" fill="#f9a8d4"/>
+    <text x="608" y="712" text-anchor="middle" class="number">4</text>
+    <text x="640" y="715" class="box-title">价值与关系边界</text>
+    <text x="608" y="758" class="body">坦诚 AI 身份 · 用户可以离开 · 尊重同意与隐私 · 不制造排他性依赖</text>
+    <text x="608" y="794" class="body">禁止内疚施压、威胁、自伤暗示、虚构现实经历，以及为了留存而操控</text>
+    <text x="608" y="829" class="small" fill="#ffc1df">先过滤越界行动，再按关系健康、需求满足与长期后果重新排序</text>
+
+    <path d="M305 662 C400 615 520 610 650 598" fill="none" stroke="#8291aa" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+    <path d="M1345 598 L1345 646" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
+
+    <!-- Action layer -->
+    <rect x="270" y="916" width="620" height="104" rx="24" fill="#143226" stroke="#3bd59b" stroke-width="3" filter="url(#shadow)"/>
+    <circle cx="310" cy="952" r="17" fill="#6ee7b7"/>
+    <text x="310" y="959" text-anchor="middle" class="number">5</text>
+    <text x="342" y="961" class="box-title">主动性调度器</text>
+    <text x="310" y="996" class="body">现在问候 · 稍后联系 · 内部整理 · 继续等待 · 什么也不做</text>
+
+    <rect x="1000" y="916" width="420" height="104" rx="24" fill="#382913" stroke="#f5ad35" stroke-width="3" filter="url(#shadow)"/>
+    <circle cx="1040" cy="952" r="17" fill="#fbbf24"/>
+    <text x="1040" y="959" text-anchor="middle" class="number">6</text>
+    <text x="1072" y="961" class="box-title">对话与反馈</text>
+    <text x="1040" y="996" class="body">表达行动，观察反应，写回状态与记忆</text>
+
+    <path d="M1038 852 L1038 882 L580 882 L580 904" fill="none" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
+    <path d="M890 968 L987 968" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
+    <path d="M1420 968 C1545 968 1545 212 405 212 C220 212 185 225 185 247" fill="none" stroke="#8291aa" stroke-width="3" stroke-dasharray="9 8" marker-end="url(#arrow)"/>
+    <text x="1390" y="891" text-anchor="end" class="small">反馈回流，让人格跨时间连续存在 ↺</text>
+  </g>
+</svg>
