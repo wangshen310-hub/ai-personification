@@ -127,6 +127,25 @@ class PersonalityKernel:
     def urgencies(self) -> dict[DriveKind, float]:
         return self._homeostasis.urgencies(self._state.drive_map(), self._clock.now())
 
+    def contains_event(self, event_id: str) -> bool:
+        """Return whether an event has already been committed."""
+
+        return self._events.contains(event_id)
+
+    def preview(self, event: KernelEvent) -> KernelState:
+        """Reduce an event without committing it.
+
+        Agent adapters use this to build context from the post-event state while
+        keeping the normal ``process`` method as the only commit path.
+        """
+
+        if self._events.contains(event.id):
+            return self._state
+        return self._reduce(self._state, event)
+
+    def urgencies_for(self, state: KernelState, at: datetime) -> dict[DriveKind, float]:
+        return self._homeostasis.urgencies(state.drive_map(), at)
+
     def process(
         self,
         event: KernelEvent,

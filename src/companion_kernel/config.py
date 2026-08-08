@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from datetime import time
+from math import isfinite
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from companion_kernel.types import ConfigActor, DriveKind
@@ -26,16 +28,53 @@ class LearnedPersona:
     drive_weight_offsets: tuple[tuple[DriveKind, float], ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class ModelSettings:
+    """Configuration for a model proposal backend.
+
+    The model is deliberately configured separately from the personality state.
+    A model may propose text and actions, but it cannot change these settings.
+    """
+
+    provider: str = "ollama"
+    model: str = ""
+    base_url: str = "http://127.0.0.1:11434"
+    timeout_seconds: float = 30.0
+    max_output_chars: int = 6_000
+    max_output_tokens: int = 1_200
+    max_candidates: int = 3
+    api_key_env: str = "OPENAI_API_KEY"
+
+    def __post_init__(self) -> None:
+        if self.provider not in {"ollama", "openai_responses"}:
+            raise ValueError("unsupported model provider")
+        parsed_url = urlparse(self.base_url)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("model base_url must be an HTTP(S) URL")
+        if not isfinite(self.timeout_seconds) or not 0.1 <= self.timeout_seconds <= 300.0:
+            raise ValueError("model timeout must be between 0.1 and 300 seconds")
+        if not 256 <= self.max_output_chars <= 100_000:
+            raise ValueError("model max_output_chars is outside the supported range")
+        if not 32 <= self.max_output_tokens <= 32_000:
+            raise ValueError("model max_output_tokens is outside the supported range")
+        if not 1 <= self.max_candidates <= 8:
+            raise ValueError("model max_candidates must be between 1 and 8")
+        if not self.api_key_env.strip():
+            raise ValueError("model api_key_env cannot be empty")
+
+
 class ConfigStore:
     def __init__(
         self,
         system: SystemPolicy,
         user: UserSettings,
         learned: LearnedPersona,
+        model: ModelSettings | None = None,
     ) -> None:
         self._system = system
         self._user = user
         self._learned = learned
+        self._model = model or ModelSettings()
 
     @classmethod
     def defaults(cls) -> "ConfigStore":
@@ -57,6 +96,10 @@ class ConfigStore:
     @property
     def learned(self) -> LearnedPersona:
         return self._learned
+
+    @property
+    def model(self) -> ModelSettings:
+        return self._model
 
     def replace_system(self, value: SystemPolicy, actor: ConfigActor) -> None:
         if actor is not ConfigActor.SYSTEM_ADMIN:
@@ -88,3 +131,8 @@ class ConfigStore:
         if any(not -0.25 <= offset <= 0.25 for _, offset in value.drive_weight_offsets):
             raise ValueError("learned weight offset outside [-0.25, 0.25]")
         self._learned = value
+
+    def replace_model(self, value: ModelSettings, actor: ConfigActor) -> None:
+        if actor is not ConfigActor.SYSTEM_ADMIN:
+            raise PermissionError("only system_admin may replace model settings")
+        self._model = value
