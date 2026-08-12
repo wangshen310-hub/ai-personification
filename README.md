@@ -8,9 +8,9 @@
 
 ## 核心机制
 
-![AI Personification system overview](companion-system-architecture.svg)
+![AI Personification system overview](companion-system-architecture.svg?v=20260812-2)
 
-![AI Personification runtime flow](companion-runtime-flow.svg)
+![AI Personification runtime flow](companion-runtime-flow.svg?v=20260812-2)
 
 每个周期都必须形成一个决定，但外部发消息不是必须的：
 
