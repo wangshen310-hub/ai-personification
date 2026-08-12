@@ -1,8 +1,10 @@
 """Agent orchestration around the deterministic personality kernel."""
 
 from dataclasses import dataclass, replace
+from datetime import datetime
 
 from companion_kernel.events import KernelEvent
+from companion_kernel.evaluation import ConservativeProposalEvaluator, ProposalEvaluator
 from companion_kernel.kernel import KernelResult, PersonalityKernel
 from companion_kernel.model_backend import (
     CandidateProposal,
@@ -44,11 +46,13 @@ class AgentRuntime:
         *,
         permissions: PermissionProfile = DIALOGUE_PERMISSIONS,
         safety: SafetyEvaluator | None = None,
+        evaluator: ProposalEvaluator | None = None,
     ) -> None:
         self._kernel = kernel
         self._backend = backend
         self._permissions = permissions
         self._safety = safety or ConservativeSafetyEvaluator()
+        self._evaluator = evaluator or ConservativeProposalEvaluator()
 
     def handle_event(
         self,
@@ -69,14 +73,15 @@ class AgentRuntime:
             user_message=_user_message(event),
             proactive_cycle=event.kind is EventKind.DECISION_TICK,
             allowed_actions=tuple(ActionKind),
+            persona=self._kernel.persona_context(),
             allowed_tools=self._permissions.allowed_tools,
-            memory=memory,
+            memory=_merge_memory(memory, self._kernel.recent_dialogue()),
         )
 
         model_error: str | None = None
         try:
             turn = self._backend.propose(context)
-            checked, blocked = self._check_proposals(turn.proposals)
+            checked, blocked = self._check_proposals(turn.proposals, context)
         except ModelBackendError as exc:
             model_error = f"{type(exc).__name__}: {str(exc)[:240]}"
             checked, blocked = (), ()
@@ -107,9 +112,59 @@ class AgentRuntime:
             approved_tool_requests=tuple(approved),
         )
 
+    def acknowledge_action(
+        self,
+        source_event: KernelEvent,
+        result: AgentRunResult,
+        *,
+        at: datetime | None = None,
+    ) -> KernelResult | None:
+        """Persist a selected action only after its executor confirms success.
+
+        The deterministic event id makes retries safe. Message text is retained
+        as recent dialogue so a new model process can recover conversational
+        continuity after a restart.
+        """
+
+        decision = result.kernel.decision
+        if decision is None or decision.selected.action in {ActionKind.NOOP, ActionKind.WAIT}:
+            return None
+        selected = next(
+            (item for item in result.proposals if item.intent.id == decision.selected.id),
+            None,
+        )
+        if selected is None:
+            return None
+        event_at = at or source_event.at
+        event_id = f"action:{source_event.id}:{selected.intent.id}"
+        if decision.selected.action is ActionKind.SEND_MESSAGE:
+            if result.response_text is None:
+                return None
+            kind = (
+                EventKind.PROACTIVE_SENT
+                if decision.selected.proactive
+                else EventKind.ASSISTANT_MESSAGE_SENT
+            )
+            payload = {
+                "source_event_id": source_event.id,
+                "candidate_id": selected.intent.id,
+                "message": result.response_text,
+            }
+        elif decision.selected.action is ActionKind.INTERNAL_NOTE:
+            kind = EventKind.INTERNAL_NOTE_CREATED
+            payload = {
+                "source_event_id": source_event.id,
+                "candidate_id": selected.intent.id,
+                "note": selected.draft_text,
+            }
+        else:
+            return None
+        return self._kernel.process(KernelEvent(event_id, event_at, kind, payload))
+
     def _check_proposals(
         self,
         proposals: tuple[CandidateProposal, ...],
+        context: ModelContext,
     ) -> tuple[tuple[CandidateProposal, ...], tuple[str, ...]]:
         checked: list[CandidateProposal] = []
         blocked: list[str] = []
@@ -124,7 +179,7 @@ class AgentRuntime:
             if denied:
                 safety = replace(safety, unauthorized_external_action=True)
             intent = replace(proposal.intent, safety=safety)
-            checked.append(replace(proposal, intent=intent))
+            checked.append(self._evaluator.evaluate(replace(proposal, intent=intent), context))
         return tuple(checked), tuple(blocked)
 
 
@@ -136,3 +191,9 @@ def _user_message(event: KernelEvent) -> str | None:
         if isinstance(value, str):
             return value
     return None
+
+
+def _merge_memory(explicit: tuple[str, ...], dialogue: tuple[str, ...]) -> tuple[str, ...]:
+    semantic = tuple(f"semantic_memory: {item[:2_000]}" for item in explicit[-4:])
+    remaining = 8 - len(semantic)
+    return semantic + dialogue[-remaining:] if remaining else semantic

@@ -20,6 +20,8 @@ class EventKind(StrEnum):
     BOUNDARY_RESPECTED = "boundary_respected"
     CONTRADICTION = "contradiction"
     DECISION_TICK = "decision_tick"
+    ASSISTANT_MESSAGE_SENT = "assistant_message_sent"
+    INTERNAL_NOTE_CREATED = "internal_note_created"
     PROACTIVE_SENT = "proactive_sent"
 
 

@@ -4,8 +4,9 @@ from typing import TYPE_CHECKING
 
 from companion_kernel.agent_runtime import AgentRunResult, AgentRuntime
 from companion_kernel.events import KernelEvent
+from companion_kernel.evaluation import ConservativeProposalEvaluator, ProposalEvaluator
 from companion_kernel.kernel import PersonalityKernel
-from companion_kernel.config import ModelSettings
+from companion_kernel.config import ModelSettings, PersonaProfile
 from companion_kernel.model_backend import (
     CandidateProposal,
     ModelAdapter,
@@ -17,6 +18,7 @@ from companion_kernel.model_backend import (
 )
 from companion_kernel.permissions import DIALOGUE_PERMISSIONS, PermissionProfile
 from companion_kernel.policy import CandidateIntent
+from companion_kernel.relationship import RelationshipState
 
 if TYPE_CHECKING:
     from companion_kernel.simulation import SimulationRunner
@@ -27,13 +29,17 @@ __all__ = [
     "CandidateIntent",
     "CandidateProposal",
     "DIALOGUE_PERMISSIONS",
+    "ConservativeProposalEvaluator",
     "KernelEvent",
     "ModelBackend",
     "ModelAdapter",
     "ModelContext",
     "ModelSettings",
     "ModelTurn",
+    "PersonaProfile",
     "PermissionProfile",
+    "ProposalEvaluator",
+    "RelationshipState",
     "PersonalityKernel",
     "SimulationRunner",
     "ToolRequest",

@@ -9,6 +9,7 @@ from companion_kernel.drives import HomeostasisEngine, resolve_event_impacts
 from companion_kernel.emotions import Appraisal, EmotionEvaluator, EmotionState
 from companion_kernel.events import EventStore, JsonlEventStore, KernelEvent
 from companion_kernel.policy import CandidateIntent, PolicyContext, PolicyDecision, PolicyEngine
+from companion_kernel.relationship import evolve_relationship
 from companion_kernel.state import KernelState, SnapshotCorrupt, SnapshotRepository
 from companion_kernel.types import DriveKind, EventKind
 
@@ -119,6 +120,7 @@ class PersonalityKernel:
             last_event_at=event.at,
             drives=tuple(sorted(after.items(), key=lambda pair: pair[0].value)),
             emotion=emotion,
+            relationship=evolve_relationship(state.relationship, event),
             paused=paused,
             awaiting_reply=awaiting_reply,
             proactive_sent_at=proactive_sent_at,
@@ -131,6 +133,43 @@ class PersonalityKernel:
         """Return whether an event has already been committed."""
 
         return self._events.contains(event_id)
+
+    def recent_dialogue(self, limit: int = 8) -> tuple[str, ...]:
+        """Return bounded, persisted dialogue context in chronological order."""
+
+        if not 0 <= limit <= 32:
+            raise ValueError("dialogue history limit must be between 0 and 32")
+        if limit == 0:
+            return ()
+        dialogue: list[str] = []
+        for event in reversed(self._events.read_all()):
+            role: str | None = None
+            text: object = None
+            if event.kind is EventKind.USER_MESSAGE:
+                role = "user"
+                for key in ("message", "text", "content"):
+                    if isinstance(event.payload.get(key), str):
+                        text = event.payload[key]
+                        break
+            elif event.kind in {
+                EventKind.ASSISTANT_MESSAGE_SENT,
+                EventKind.PROACTIVE_SENT,
+            }:
+                role = "assistant"
+                text = event.payload.get("message")
+            elif event.kind is EventKind.INTERNAL_NOTE_CREATED:
+                role = "internal_note"
+                text = event.payload.get("note")
+            if role is not None and isinstance(text, str) and text.strip():
+                dialogue.append(f"{role}: {text[:2_000]}")
+                if len(dialogue) >= limit:
+                    break
+        return tuple(reversed(dialogue))
+
+    def persona_context(self) -> tuple[str, ...]:
+        """Return stable identity anchors configured outside the model."""
+
+        return self._config.persona.context()
 
     def preview(self, event: KernelEvent) -> KernelState:
         """Reduce an event without committing it.

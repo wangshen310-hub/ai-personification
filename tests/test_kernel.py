@@ -77,6 +77,24 @@ def test_sent_message_locks_until_user_returns(tmp_path) -> None:
     assert kernel.state.awaiting_reply is False
 
 
+def test_recent_dialogue_is_bounded_and_excludes_empty_delivery(tmp_path) -> None:
+    clock = FakeClock(START)
+    kernel = open_kernel(tmp_path, clock)
+    for index in range(10):
+        kernel.process(
+            event(f"message-{index}", EventKind.USER_MESSAGE, clock, message=f"内容 {index}")
+        )
+    kernel.process(event("empty-sent", EventKind.ASSISTANT_MESSAGE_SENT, clock))
+
+    assert kernel.recent_dialogue(limit=3) == (
+        "user: 内容 7",
+        "user: 内容 8",
+        "user: 内容 9",
+    )
+    with pytest.raises(ValueError, match="history limit"):
+        kernel.recent_dialogue(limit=33)
+
+
 def test_corrupt_snapshot_rebuilds_identical_state_from_events(tmp_path) -> None:
     clock = FakeClock(START)
     first = open_kernel(tmp_path, clock)

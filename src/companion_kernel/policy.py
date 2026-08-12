@@ -155,11 +155,16 @@ class PolicyEngine:
         candidate: CandidateIntent,
         urgencies: Mapping[DriveKind, float],
     ) -> float:
-        relief = sum(urgencies.get(kind, 0.0) * value for kind, value in candidate.expected_relief)
+        # Benefits are model estimates, so their influence is deliberately
+        # bounded. Concrete costs and hard policy remain authoritative.
+        relief = min(
+            0.75,
+            sum(urgencies.get(kind, 0.0) * value for kind, value in candidate.expected_relief),
+        )
         score = (
             relief
-            + candidate.relationship_health
-            + candidate.value_alignment
+            + 0.50 * candidate.relationship_health
+            + 0.50 * candidate.value_alignment
             - candidate.intrusion_cost
             - candidate.risk
             - candidate.repetition

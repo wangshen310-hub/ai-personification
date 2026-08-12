@@ -101,3 +101,22 @@ def test_one_message_in_rolling_24_hours_is_the_hard_maximum() -> None:
 def test_policy_context_rejects_naive_time() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         context(now=datetime(2026, 8, 5, 14, 0))
+
+
+def test_model_reported_benefits_cannot_overpower_concrete_costs() -> None:
+    engine = PolicyEngine(SystemPolicy())
+    inflated = replace(
+        send("inflated"),
+        intrusion_cost=1.0,
+        risk=1.0,
+        repetition=1.0,
+    )
+
+    decision = engine.decide(
+        (inflated,),
+        {DriveKind.CONNECTION: 1.0},
+        context(),
+    )
+
+    assert decision.selected.action is ActionKind.NOOP
+    assert decision.evaluation_for("inflated").score < 0.0

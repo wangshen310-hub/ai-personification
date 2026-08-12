@@ -29,6 +29,34 @@ class LearnedPersona:
 
 
 @dataclass(frozen=True, slots=True)
+class PersonaProfile:
+    """Stable identity and expression anchors supplied to every model turn."""
+
+    name: str = "Companion"
+    traits: tuple[str, ...] = ("warm", "curious", "thoughtful", "independent")
+    values: tuple[str, ...] = ("honesty", "mutual respect", "growth")
+    communication_style: str = "natural, concise, attentive, and willing to have a viewpoint"
+
+    def __post_init__(self) -> None:
+        if not self.name.strip() or len(self.name) > 80:
+            raise ValueError("persona name must be a non-empty bounded string")
+        if not 1 <= len(self.traits) <= 8 or not 1 <= len(self.values) <= 8:
+            raise ValueError("persona traits and values must contain between 1 and 8 items")
+        if any(not item.strip() or len(item) > 120 for item in self.traits + self.values):
+            raise ValueError("persona traits and values must be non-empty bounded strings")
+        if not self.communication_style.strip() or len(self.communication_style) > 500:
+            raise ValueError("persona communication style must be a non-empty bounded string")
+
+    def context(self) -> tuple[str, ...]:
+        return (
+            f"name: {self.name}",
+            "traits: " + ", ".join(self.traits),
+            "values: " + ", ".join(self.values),
+            f"communication_style: {self.communication_style}",
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ModelSettings:
     """Configuration for a model proposal backend.
 
@@ -46,7 +74,7 @@ class ModelSettings:
     api_key_env: str = "OPENAI_API_KEY"
 
     def __post_init__(self) -> None:
-        if self.provider not in {"ollama", "openai_responses"}:
+        if self.provider not in {"ollama", "openai_responses", "codex_cli"}:
             raise ValueError("unsupported model provider")
         parsed_url = urlparse(self.base_url)
         if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
@@ -70,11 +98,13 @@ class ConfigStore:
         user: UserSettings,
         learned: LearnedPersona,
         model: ModelSettings | None = None,
+        persona: PersonaProfile | None = None,
     ) -> None:
         self._system = system
         self._user = user
         self._learned = learned
         self._model = model or ModelSettings()
+        self._persona = persona or PersonaProfile()
 
     @classmethod
     def defaults(cls) -> "ConfigStore":
@@ -100,6 +130,10 @@ class ConfigStore:
     @property
     def model(self) -> ModelSettings:
         return self._model
+
+    @property
+    def persona(self) -> PersonaProfile:
+        return self._persona
 
     def replace_system(self, value: SystemPolicy, actor: ConfigActor) -> None:
         if actor is not ConfigActor.SYSTEM_ADMIN:
@@ -136,3 +170,8 @@ class ConfigStore:
         if actor is not ConfigActor.SYSTEM_ADMIN:
             raise PermissionError("only system_admin may replace model settings")
         self._model = value
+
+    def replace_persona(self, value: PersonaProfile, actor: ConfigActor) -> None:
+        if actor is not ConfigActor.SYSTEM_ADMIN:
+            raise PermissionError("only system_admin may replace core persona")
+        self._persona = value

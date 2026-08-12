@@ -61,16 +61,21 @@ user responds again.
 
 - UTC virtual clock and idempotent event log;
 - six bounded drives and continuous deficit tracking;
+- stable name, trait, value, and communication-style anchors independent of the model provider;
+- slowly evolving familiarity, trust, reciprocity, and boundary-clarity state;
 - deterministic emotion appraisal and slow mood updates;
 - system, user, and learned-persona configuration authority;
 - pause, quiet hours, a one-message-per-24-hours limit, and unanswered-message lock;
 - fail-closed behavior when safety assessment is missing or uncertain;
 - checksummed snapshots, event replay, and structured decision audit;
+- explicit action acknowledgements that persist delivered replies and internal notes;
+- bounded recent dialogue recovery across model-process and application restarts;
+- deterministic intrusion and repetition cost floors independent of model self-scoring;
 - 30/180-day simulations and a 100-seed invariant sweep.
 
-This version includes Ollama and OpenAI Responses API backends plus an AgentRuntime coordinator. It
-does not yet implement long-term semantic memory, a user interface, or real message delivery; those
-capabilities are intended to arrive through separate adapters.
+This version includes Ollama, OpenAI Responses API, and authenticated Codex CLI backends plus an
+AgentRuntime coordinator. It does not yet implement long-term semantic memory, a user interface, or
+an external message channel. Recent dialogue is bounded history, not inferred long-term fact memory.
 
 ## Connecting a model agent
 
@@ -96,15 +101,18 @@ backend = create_model_backend(settings)
 kernel = PersonalityKernel.open(Path("./runtime"), SystemClock(), config)
 runtime = AgentRuntime(kernel, backend)
 
-result = runtime.handle_event(
-    KernelEvent(
-        "message-1",
-        datetime.now(UTC),
-        EventKind.USER_MESSAGE,
-        {"message": "Hello"},
-    )
+event = KernelEvent(
+    "message-1",
+    datetime.now(UTC),
+    EventKind.USER_MESSAGE,
+    {"message": "Hello"},
 )
+result = runtime.handle_event(event)
 print(result.response_text)  # set only when policy selects SEND_MESSAGE
+
+# Confirm only after the channel actually displayed or delivered the action.
+if result.response_text is not None:
+    runtime.acknowledge_action(event, result, at=datetime.now(UTC))
 ```
 
 To use Codex or another OpenAI model, change the backend configuration:
@@ -143,6 +151,19 @@ Start a local model chat (using Ollama as an example):
 .venv/bin/companion-chat --provider ollama --model '<your-local-model>'
 ```
 
+Define a stable and distinguishable persona at startup:
+
+```bash
+.venv/bin/companion-chat --provider ollama --model '<your-local-model>' \\
+  --persona-name 'Mira' \\
+  --persona-trait 'playful' --persona-trait 'direct' \\
+  --persona-value 'honesty' --persona-value 'curiosity' \\
+  --persona-style 'short, vivid, and opinionated'
+```
+
+These anchors enter every model turn. Relationship dimensions evolve from confirmed events rather
+than from a model declaring that the relationship has changed.
+
 To use Codex or another OpenAI model:
 
 ```bash
@@ -163,12 +184,14 @@ src/companion_kernel/
 ├── events.py      # Immutable events and JSONL event store
 ├── drives.py      # Six-drive homeostasis engine
 ├── emotions.py    # Emotion and mood appraisal
+├── relationship.py # Multi-dimensional relationship state and slow evolution
 ├── policy.py      # Hard boundaries and candidate scoring
 ├── model_backend.py  # Model context, candidate protocol, and backend factory
 ├── ollama_backend.py # Local Ollama backend
 ├── openai_backend.py # OpenAI Responses API backend
 ├── permissions.py # Agent tool permission profiles
 ├── safety.py      # Independent conservative safety checker
+├── evaluation.py  # Independent intrusion and repetition cost calibration
 ├── agent_runtime.py # Model, permissions, and kernel coordinator
 ├── agent_cli.py   # Local interactive chat CLI
 ├── state.py       # Canonical state and checksummed snapshots
@@ -179,8 +202,10 @@ src/companion_kernel/
 
 ## Safety boundary
 
-Model output is untrusted candidate input and must pass through the runtime policy gate. The model
-cannot construct core events, rewrite drives, disable safety policies, or obtain external-tool access.
+Model output is untrusted candidate input and must pass through the runtime policy gate. Concrete
+intrusion and repetition cost floors are derived from trusted context, and model-estimated benefits
+are bounded before scoring. The model cannot construct core events, rewrite drives, disable safety
+policies, or obtain external-tool access.
 Proactive-versus-reactive mode is derived from a trusted event kind rather than self-declared by the model.
 
 The system must not use guilt, threats, jealousy, false vulnerability, self-harm suggestions, or
@@ -189,8 +214,8 @@ exclusivity to obtain a response from the user.
 ## Roadmap
 
 1. Improve safety evaluation, add semantic memory, and add model routing.
-2. Add user-controlled semantic and episodic memory services.
-3. Add background reflection, message generation, and delivery feedback adapters.
+2. Add user-controlled semantic and episodic memory services above bounded recent history.
+3. Add background reflection, message generation, and external delivery adapters.
 4. Add Web/App/IM channels and a visual audit interface.
 
 ## License

@@ -2,7 +2,14 @@ from datetime import time
 
 import pytest
 
-from companion_kernel.config import ConfigStore, LearnedPersona, ModelSettings, SystemPolicy, UserSettings
+from companion_kernel.config import (
+    ConfigStore,
+    LearnedPersona,
+    ModelSettings,
+    PersonaProfile,
+    SystemPolicy,
+    UserSettings,
+)
 from companion_kernel.types import ConfigActor, DriveKind
 
 
@@ -20,6 +27,9 @@ def test_model_cannot_modify_any_config_layer() -> None:
 
     with pytest.raises(PermissionError):
         store.replace_model(ModelSettings(model="local"), ConfigActor.MODEL)
+
+    with pytest.raises(PermissionError):
+        store.replace_persona(PersonaProfile(name="Other"), ConfigActor.MODEL)
 
 
 def test_user_limit_cannot_exceed_system_limit() -> None:
@@ -56,3 +66,23 @@ def test_system_admin_can_select_model_backend() -> None:
     store = ConfigStore.defaults()
     store.replace_model(ModelSettings(provider="ollama", model="local-instruct"), ConfigActor.SYSTEM_ADMIN)
     assert store.model.model == "local-instruct"
+
+
+def test_codex_cli_is_a_supported_model_backend() -> None:
+    settings = ModelSettings(provider="codex_cli", model="gpt-5.6-sol")
+    assert settings.provider == "codex_cli"
+
+
+def test_system_admin_can_define_stable_persona() -> None:
+    store = ConfigStore.defaults()
+    profile = PersonaProfile(
+        name="Mira",
+        traits=("playful", "direct"),
+        values=("honesty", "curiosity"),
+        communication_style="short, vivid, and opinionated",
+    )
+
+    store.replace_persona(profile, ConfigActor.SYSTEM_ADMIN)
+
+    assert store.persona == profile
+    assert store.persona.context()[0] == "name: Mira"

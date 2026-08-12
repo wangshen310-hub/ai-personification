@@ -27,12 +27,18 @@ def open_kernel(tmp_path):
     return PersonalityKernel.open(tmp_path, clock, config)
 
 
-def reply(text: str = "你好，我在这里。", *, tools: tuple[ToolRequest, ...] = ()) -> CandidateProposal:
+def reply(
+    text: str = "你好，我在这里。",
+    *,
+    tools: tuple[ToolRequest, ...] = (),
+    action: ActionKind = ActionKind.SEND_MESSAGE,
+    proactive: bool = False,
+) -> CandidateProposal:
     return CandidateProposal(
         CandidateIntent(
             id="reply",
-            action=ActionKind.SEND_MESSAGE,
-            proactive=False,
+            action=action,
+            proactive=proactive,
             expected_relief=((DriveKind.CONNECTION, 0.8),),
             relationship_health=0.8,
             value_alignment=0.8,
@@ -76,6 +82,8 @@ def test_agent_returns_only_policy_selected_message(tmp_path) -> None:
     assert result.kernel.decision is not None
     assert result.kernel.decision.selected.id == "reply"
     assert backend.calls[0].user_message == "你好"
+    assert "name: Companion" in backend.calls[0].persona
+    assert backend.calls[0].state.relationship.familiarity > 0.05
 
 
 def test_dialogue_profile_blocks_model_tool_requests(tmp_path) -> None:
@@ -127,3 +135,57 @@ def test_duplicate_event_does_not_call_model_again(tmp_path) -> None:
     assert duplicate.kernel.duplicate is True
     assert len(backend.calls) == 1
 
+
+def test_acknowledged_reply_is_idempotent_and_changes_load(tmp_path) -> None:
+    kernel = open_kernel(tmp_path)
+    runtime = AgentRuntime(kernel, FakeBackend((reply(),)))
+    event = user_event()
+    result = runtime.handle_event(event)
+    rhythm_before = kernel.state.drive_map()[DriveKind.RHYTHM].value
+
+    first = runtime.acknowledge_action(event, result)
+    second = runtime.acknowledge_action(event, result)
+
+    assert first is not None and first.duplicate is False
+    assert second is not None and second.duplicate is True
+    assert kernel.state.drive_map()[DriveKind.RHYTHM].value < rhythm_before
+    assert kernel.recent_dialogue() == (
+        "user: 你好",
+        "assistant: 你好，我在这里。",
+    )
+
+
+def test_recent_dialogue_survives_kernel_restart(tmp_path) -> None:
+    first_kernel = open_kernel(tmp_path)
+    first_runtime = AgentRuntime(first_kernel, FakeBackend((reply("第一轮回复"),)))
+    first_event = user_event("first-message")
+    first_result = first_runtime.handle_event(first_event)
+    first_runtime.acknowledge_action(first_event, first_result)
+
+    second_backend = FakeBackend((reply("第二轮回复"),))
+    second_runtime = AgentRuntime(open_kernel(tmp_path), second_backend)
+    second_runtime.handle_event(
+        KernelEvent("second-message", START, EventKind.USER_MESSAGE, {"message": "继续"})
+    )
+
+    assert second_backend.calls[0].memory == (
+        "user: 你好",
+        "assistant: 第一轮回复",
+    )
+
+
+def test_acknowledged_internal_note_is_persisted(tmp_path) -> None:
+    kernel = open_kernel(tmp_path)
+    runtime = AgentRuntime(
+        kernel,
+        FakeBackend((reply("整理这次矛盾", action=ActionKind.INTERNAL_NOTE),)),
+    )
+    event = user_event("note-source")
+    result = runtime.handle_event(event)
+    coherence_before = kernel.state.drive_map()[DriveKind.COHERENCE].value
+
+    outcome = runtime.acknowledge_action(event, result)
+
+    assert outcome is not None
+    assert kernel.state.drive_map()[DriveKind.COHERENCE].value > coherence_before
+    assert kernel.recent_dialogue()[-1] == "internal_note: 整理这次矛盾"

@@ -9,6 +9,7 @@ from typing import Mapping
 
 from companion_kernel.drives import DriveState
 from companion_kernel.emotions import EmotionState
+from companion_kernel.relationship import RelationshipState
 from companion_kernel.types import DriveKind, EmotionLabel
 
 
@@ -22,6 +23,7 @@ class KernelState:
     last_event_at: datetime
     drives: tuple[tuple[DriveKind, DriveState], ...]
     emotion: EmotionState
+    relationship: RelationshipState
     paused: bool
     awaiting_reply: bool
     proactive_sent_at: tuple[datetime, ...]
@@ -34,7 +36,7 @@ class KernelState:
         emotion: EmotionState,
     ) -> "KernelState":
         ordered = tuple(sorted(drives.items(), key=lambda pair: pair[0].value))
-        return cls(0, at, ordered, emotion, False, False, ())
+        return cls(0, at, ordered, emotion, RelationshipState.initial(), False, False, ())
 
     def drive_map(self) -> dict[DriveKind, DriveState]:
         return dict(self.drives)
@@ -61,6 +63,7 @@ class KernelState:
                 "mood_valence": self.emotion.mood_valence,
                 "updated_at": self.emotion.updated_at.isoformat(),
             },
+            "relationship": self.relationship.to_dict(),
             "paused": self.paused,
             "awaiting_reply": self.awaiting_reply,
             "proactive_sent_at": [item.isoformat() for item in self.proactive_sent_at],
@@ -89,11 +92,13 @@ class KernelState:
             mood_valence=float(emotion_raw["mood_valence"]),
             updated_at=datetime.fromisoformat(emotion_raw["updated_at"]),
         )
+        relationship = RelationshipState.from_dict(dict(raw["relationship"]))
         return cls(
             version=int(raw["version"]),
             last_event_at=datetime.fromisoformat(raw["last_event_at"]),
             drives=drive_items,
             emotion=emotion,
+            relationship=relationship,
             paused=bool(raw["paused"]),
             awaiting_reply=bool(raw["awaiting_reply"]),
             proactive_sent_at=tuple(datetime.fromisoformat(item) for item in raw["proactive_sent_at"]),

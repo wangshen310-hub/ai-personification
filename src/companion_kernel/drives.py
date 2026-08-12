@@ -63,6 +63,11 @@ EVENT_IMPACTS: dict[EventKind, dict[DriveKind, float]] = {
     EventKind.BOUNDARY_RESPECTED: {DriveKind.AUTONOMY: 0.10},
     EventKind.CONTRADICTION: {DriveKind.COHERENCE: -0.20},
     EventKind.DECISION_TICK: {},
+    EventKind.ASSISTANT_MESSAGE_SENT: {DriveKind.RHYTHM: -0.03},
+    EventKind.INTERNAL_NOTE_CREATED: {
+        DriveKind.COHERENCE: 0.08,
+        DriveKind.RHYTHM: -0.01,
+    },
     EventKind.PROACTIVE_SENT: {DriveKind.RHYTHM: -0.05},
 }
 

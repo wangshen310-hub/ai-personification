@@ -8,7 +8,13 @@ from uuid import uuid4
 
 from companion_kernel.agent_runtime import AgentRuntime
 from companion_kernel.clock import SystemClock
-from companion_kernel.config import ConfigActor, ConfigStore, ModelSettings, UserSettings
+from companion_kernel.config import (
+    ConfigActor,
+    ConfigStore,
+    ModelSettings,
+    PersonaProfile,
+    UserSettings,
+)
 from companion_kernel.events import KernelEvent
 from companion_kernel.kernel import PersonalityKernel
 from companion_kernel.model_backend import ModelBackendError, create_model_backend
@@ -17,10 +23,19 @@ from companion_kernel.types import EventKind
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Chat with a policy-gated AI Personification runtime")
-    parser.add_argument("--provider", choices=("ollama", "openai_responses"), default="ollama")
+    parser.add_argument(
+        "--provider",
+        choices=("ollama", "openai_responses", "codex_cli"),
+        default="ollama",
+    )
     parser.add_argument("--model", required=True, help="local model name or OpenAI model id")
     parser.add_argument("--base-url", default=None, help="provider base URL")
+    parser.add_argument("--timeout", type=float, default=None, help="model timeout in seconds")
     parser.add_argument("--runtime", type=Path, default=Path("./runtime"))
+    parser.add_argument("--persona-name", default="Companion", help="stable persona name")
+    parser.add_argument("--persona-trait", action="append", default=[], help="repeatable persona trait")
+    parser.add_argument("--persona-value", action="append", default=[], help="repeatable persona value")
+    parser.add_argument("--persona-style", default=None, help="stable communication style")
     return parser
 
 
@@ -35,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
         provider=args.provider,
         model=args.model,
         base_url=base_url,
+        timeout_seconds=args.timeout or (120.0 if args.provider == "codex_cli" else 30.0),
     )
     try:
         backend = create_model_backend(settings)
@@ -44,6 +60,16 @@ def main(argv: list[str] | None = None) -> int:
 
     config = ConfigStore.defaults()
     config.replace_user(UserSettings(timezone="UTC"), ConfigActor.USER)
+    defaults = PersonaProfile()
+    config.replace_persona(
+        PersonaProfile(
+            name=args.persona_name,
+            traits=tuple(args.persona_trait) or defaults.traits,
+            values=tuple(args.persona_value) or defaults.values,
+            communication_style=args.persona_style or defaults.communication_style,
+        ),
+        ConfigActor.SYSTEM_ADMIN,
+    )
     kernel = PersonalityKernel.open(args.runtime, SystemClock(), config)
     runtime = AgentRuntime(kernel, backend)
 
@@ -69,10 +95,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"agent unavailable: {result.model_error}", file=sys.stderr)
         elif result.response_text is not None:
             print(f"agent> {result.response_text}")
+            runtime.acknowledge_action(event, result, at=datetime.now(UTC))
         else:
             print("agent> [no action]")
 
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
-
