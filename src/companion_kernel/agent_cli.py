@@ -19,6 +19,7 @@ from companion_kernel.events import KernelEvent
 from companion_kernel.kernel import PersonalityKernel
 from companion_kernel.model_backend import ModelBackendError, create_model_backend
 from companion_kernel.types import EventKind
+from companion_kernel.types import ActionKind
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default=None, help="provider base URL")
     parser.add_argument("--timeout", type=float, default=None, help="model timeout in seconds")
     parser.add_argument("--runtime", type=Path, default=Path("./runtime"))
-    parser.add_argument("--persona-name", default="Companion", help="stable persona name")
+    parser.add_argument("--persona-name", default=None, help="stable persona name")
     parser.add_argument("--persona-trait", action="append", default=[], help="repeatable persona trait")
     parser.add_argument("--persona-value", action="append", default=[], help="repeatable persona value")
     parser.add_argument("--persona-style", default=None, help="stable communication style")
@@ -58,18 +59,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"backend configuration error: {exc}", file=sys.stderr)
         return 2
 
-    config = ConfigStore.defaults()
-    config.replace_user(UserSettings(timezone="UTC"), ConfigActor.USER)
-    defaults = PersonaProfile()
-    config.replace_persona(
-        PersonaProfile(
-            name=args.persona_name,
-            traits=tuple(args.persona_trait) or defaults.traits,
-            values=tuple(args.persona_value) or defaults.values,
-            communication_style=args.persona_style or defaults.communication_style,
-        ),
-        ConfigActor.SYSTEM_ADMIN,
-    )
+    config = ConfigStore.open(args.runtime)
+    if config.user.timezone is None:
+        config.replace_user(UserSettings(timezone="UTC"), ConfigActor.USER)
+    current = config.persona
+    if args.persona_name or args.persona_trait or args.persona_value or args.persona_style:
+        config.replace_persona(
+            PersonaProfile(
+                name=args.persona_name or current.name,
+                traits=tuple(args.persona_trait) or current.traits,
+                values=tuple(args.persona_value) or current.values,
+                communication_style=args.persona_style or current.communication_style,
+            ),
+            ConfigActor.SYSTEM_ADMIN,
+        )
     kernel = PersonalityKernel.open(args.runtime, SystemClock(), config)
     runtime = AgentRuntime(kernel, backend)
 
@@ -95,7 +98,25 @@ def main(argv: list[str] | None = None) -> int:
             print(f"agent unavailable: {result.model_error}", file=sys.stderr)
         elif result.response_text is not None:
             print(f"agent> {result.response_text}")
-            runtime.acknowledge_action(event, result, at=datetime.now(UTC))
+            if result.action_id is None:
+                print("agent action was not persisted", file=sys.stderr)
+                continue
+            runtime.acknowledge_action(
+                result.action_id,
+                outcome="delivered",
+                at=datetime.now(UTC),
+            )
+        elif (
+            result.action_id is not None
+            and result.kernel.decision is not None
+            and result.kernel.decision.selected.action is ActionKind.INTERNAL_NOTE
+        ):
+            runtime.acknowledge_action(
+                result.action_id,
+                outcome="delivered",
+                at=datetime.now(UTC),
+            )
+            print("agent> [internal reflection recorded]")
         else:
             print("agent> [no action]")
 

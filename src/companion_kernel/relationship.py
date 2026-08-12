@@ -39,12 +39,18 @@ class RelationshipState:
 
 
 _DELTAS: dict[EventKind, tuple[float, float, float, float]] = {
-    EventKind.USER_MESSAGE: (0.012, 0.004, 0.015, 0.0),
     EventKind.ASSISTANT_MESSAGE_SENT: (0.006, 0.0, 0.004, 0.0),
     EventKind.PROACTIVE_SENT: (0.004, 0.0, -0.006, 0.0),
     EventKind.BOUNDARY_RESPECTED: (0.0, 0.025, 0.0, 0.040),
     EventKind.USER_PAUSE: (0.0, 0.0, 0.0, 0.020),
     EventKind.CONTRADICTION: (0.0, -0.035, -0.010, -0.015),
+    EventKind.USER_APPRECIATION: (0.010, 0.018, 0.020, 0.0),
+    EventKind.USER_BOUNDARY_SET: (0.004, 0.008, 0.0, 0.035),
+    EventKind.USER_REJECTION: (0.002, 0.0, 0.0, 0.018),
+    EventKind.CONFLICT_DETECTED: (0.0, -0.040, -0.020, -0.012),
+    EventKind.REPAIR_ATTEMPTED: (0.008, 0.025, 0.018, 0.012),
+    EventKind.COMMITMENT_COMPLETED: (0.006, 0.020, 0.012, 0.0),
+    EventKind.MEMORY_CORRECTED: (0.0, 0.006, 0.0, 0.018),
 }
 
 

@@ -2,134 +2,35 @@
 
 [中文](README.md) · [English](README_EN.md)
 
-An experimental project for building a long-term AI companion with a persistent personality.
+A long-term companion runtime with model-external motivation, persistent identity, and background agency.
 
-Instead of putting the whole personality into a prompt, the project uses an independent runtime
-to maintain state, model drives, evaluate affect, enforce boundaries, and audit decisions. A
-language model is used for contextual understanding and expression.
+The personality is not merely a prompt. The runtime owns identity, drives, relationship state, evidence-backed memory, decisions, and action delivery state. Language models interpret and render language, but cannot manufacture a reason to act through self-scoring.
 
-## What this project is
+## Runtime loop
 
-The goal is not a chatbot that starts from zero in every conversation. The goal is a system that
-can remain coherent over time:
+1. User input and time changes enter a transactional SQLite event log.
+2. A semantic interpreter derives sourced, confidence-bearing facts such as appreciation, boundaries, rejection, conflict, repair, commitments, preferences, and corrections.
+3. The homeostasis engine updates connection, care, curiosity, autonomy, coherence, and interaction load.
+4. A model-independent motivation engine creates native respond, check-in, reflect, and wait opportunities.
+5. The model renders only actions currently authorized by the kernel. Model-authored benefit scores are discarded.
+6. Policy compares need relief, relationship state, load, intrusion, repetition, and hard boundaries.
+7. Selected actions enter a durable Outbox. Personality state changes only after a channel confirms the persisted `action_id`.
 
-- it tracks changes in a relationship instead of only replaying isolated messages;
-- it has internal drives such as connection, care, curiosity, autonomy, coherence, and rhythm;
-- drives accumulate, recover, and conflict, influencing whether action is appropriate;
-- it can express emotion without using emotion to manipulate the user;
-- it can initiate contact while respecting pauses, quiet hours, refusals, and unanswered messages;
-- its core state and behavioral boundaries remain stable when the model provider changes.
+## Implemented
 
-## Why use an independent runtime
+- SQLite WAL event persistence with unique event IDs and legacy JSONL import;
+- durable persona, user settings, evidence memories, learned drive weights, and Outbox actions;
+- kernel-owned motivation, including a guaranteed wait option;
+- semantic relationship updates instead of trust growth per message count;
+- strict action acknowledgement by durable ID and cancellation on pause;
+- quiet hours, configurable 24-hour cadence limits, and a 72-hour unanswered cooldown before reevaluation;
+- interactive chat and a separate background worker;
+- Ollama, OpenAI Responses API, and authenticated Codex CLI backends;
+- deterministic audit, adversarial tests, and 30/180-day simulations.
 
-Prompts are useful for describing style, but they are a poor place to enforce a long-lived state
-machine. A prompt alone cannot reliably guarantee that:
+This remains a single-user, single-persona text runtime. Full episodic retrieval, external channel adapters, a web UI, and multi-user isolation are not yet included.
 
-- time changes state in a predictable way;
-- duplicate events do not apply their effects twice;
-- high drive values cannot bypass safety boundaries;
-- changing models does not completely change the personality;
-- every proactive action can be explained and audited.
-
-The project therefore separates responsibilities:
-
-| Component | Responsibility |
-| --- | --- |
-| `Companion Runtime` | Events, time, drives, affect, state, policy, safety, audit, and replay |
-| `ModelBackend` | Calls a remote model API or local model, understands context, and proposes candidate intents |
-| Channel adapter | Receives user messages and sends only policy-approved actions |
-
-The model may propose “send a check-in,” but it cannot directly change state or send a message.
-
-## How it works
-
-![AI Personification system overview](companion-system-architecture-en.svg)
-
-A user message or background time event follows this path:
-
-1. The input becomes an immutable, deduplicated event.
-2. The runtime advances virtual time and updates drives and affect.
-3. The system builds the required context and asks the model for structured candidates.
-4. The policy layer checks hard boundaries first, then compares relief, relationship health, risk, and intrusion cost.
-5. The runtime chooses send, internal note, wait, or reject, and writes the result to the event and audit logs.
-
-Background proactive contact follows the same path. When no meaningful drive is active, the runtime
-can do nothing. After one proactive message goes unanswered, proactive contact is locked until the
-user responds again.
-
-## Implemented in v0.1
-
-- UTC virtual clock and idempotent event log;
-- six bounded drives and continuous deficit tracking;
-- stable name, trait, value, and communication-style anchors independent of the model provider;
-- slowly evolving familiarity, trust, reciprocity, and boundary-clarity state;
-- deterministic emotion appraisal and slow mood updates;
-- system, user, and learned-persona configuration authority;
-- pause, quiet hours, a one-message-per-24-hours limit, and unanswered-message lock;
-- fail-closed behavior when safety assessment is missing or uncertain;
-- checksummed snapshots, event replay, and structured decision audit;
-- explicit action acknowledgements that persist delivered replies and internal notes;
-- bounded recent dialogue recovery across model-process and application restarts;
-- deterministic intrusion and repetition cost floors independent of model self-scoring;
-- 30/180-day simulations and a 100-seed invariant sweep.
-
-This version includes Ollama, OpenAI Responses API, and authenticated Codex CLI backends plus an
-AgentRuntime coordinator. It does not yet implement long-term semantic memory, a user interface, or
-an external message channel. Recent dialogue is bounded history, not inferred long-term fact memory.
-
-## Connecting a model agent
-
-The model is a proposal generator, not the personality kernel. `AgentRuntime` builds a bounded
-context, asks the model for structured candidates, and then passes them to `PolicyEngine` for the
-final decision. The default `DIALOGUE_PERMISSIONS` profile has no tools. File, shell, or external
-service requests returned by a model are reported as blocked and are never executed by this runtime.
-
-For a fully local setup, start Ollama on the same machine and provide a local chat/instruct model:
-
-```python
-from datetime import UTC, datetime
-from pathlib import Path
-
-from companion_kernel import AgentRuntime, KernelEvent, PersonalityKernel, create_model_backend
-from companion_kernel.clock import SystemClock
-from companion_kernel.config import ConfigStore, ModelSettings
-from companion_kernel.types import EventKind
-
-config = ConfigStore.defaults()
-settings = ModelSettings(provider="ollama", model="<your-local-model>")
-backend = create_model_backend(settings)
-kernel = PersonalityKernel.open(Path("./runtime"), SystemClock(), config)
-runtime = AgentRuntime(kernel, backend)
-
-event = KernelEvent(
-    "message-1",
-    datetime.now(UTC),
-    EventKind.USER_MESSAGE,
-    {"message": "Hello"},
-)
-result = runtime.handle_event(event)
-print(result.response_text)  # set only when policy selects SEND_MESSAGE
-
-# Confirm only after the channel actually displayed or delivered the action.
-if result.response_text is not None:
-    runtime.acknowledge_action(event, result, at=datetime.now(UTC))
-```
-
-To use Codex or another OpenAI model, change the backend configuration:
-
-```python
-settings = ModelSettings(
-    provider="openai_responses",
-    model="<openai-codex-model>",
-    base_url="https://api.openai.com/v1",
-)
-```
-
-This keeps personality state and policy local, but sends model requests to the remote API. Use the
-Ollama backend for a fully offline path. If the model is unavailable, returns invalid JSON, or fails
-the independent safety check, the runtime commits the event and safely chooses no action.
-
-## Quick start
+## Install and verify
 
 Python 3.12 or newer is required.
 
@@ -137,88 +38,80 @@ Python 3.12 or newer is required.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m pytest -q -W error
+.venv/bin/python -m companion_kernel.simulation --days 30 --seed 7 --reply-every-days 0
+.venv/bin/python -m companion_kernel.simulation --days 180 --seed 42 --reply-every-days 1
 ```
 
-Run a 180-day simulation:
+The silent-user simulation should reduce cadence after an unanswered message while remaining able to reevaluate after cooldown. Both simulations should report zero boundary violations and keep all drive values within `[0, 1]`. The 30/180-day durations are test windows only: neither is used as a runtime limit, and there is no lifetime cap on proactive messages.
+
+## Chat
 
 ```bash
-.venv/bin/python -m companion_kernel.simulation --days 180 --seed 42
+.venv/bin/companion-chat \
+  --provider ollama --model '<local-model>' \
+  --runtime ./runtime \
+  --persona-name 'Mira' \
+  --persona-trait playful --persona-trait direct
 ```
 
-Start a local model chat (using Ollama as an example):
+Persona arguments may be omitted on later starts because configuration is restored from `runtime/runtime.db`.
+
+Use OpenAI Responses:
 
 ```bash
-.venv/bin/companion-chat --provider ollama --model '<your-local-model>'
+OPENAI_API_KEY='...' .venv/bin/companion-chat \
+  --provider openai_responses --model '<model-id>' --runtime ./runtime
 ```
 
-Define a stable and distinguishable persona at startup:
+Or reuse local Codex authentication:
 
 ```bash
-.venv/bin/companion-chat --provider ollama --model '<your-local-model>' \\
-  --persona-name 'Mira' \\
-  --persona-trait 'playful' --persona-trait 'direct' \\
-  --persona-value 'honesty' --persona-value 'curiosity' \\
-  --persona-style 'short, vivid, and opinionated'
+.venv/bin/companion-chat \
+  --provider codex_cli --model 'gpt-5.6-sol' --runtime ./runtime
 ```
 
-These anchors enter every model turn. Relationship dimensions evolve from confirmed events rather
-than from a model declaring that the relationship has changed.
+## Background worker
 
-To use Codex or another OpenAI model:
+No GUI is required. Run a persistent decision worker against the same runtime directory:
 
 ```bash
-OPENAI_API_KEY='...' .venv/bin/companion-chat \\
-  --provider openai_responses --model '<openai-codex-model>'
+.venv/bin/companion-worker \
+  --provider ollama --model '<local-model>' \
+  --runtime ./runtime --interval-seconds 3600
 ```
 
-The simulator uses a temporary runtime directory by default, so runs are isolated and repeatable.
-Drive values should remain in `[0, 1]` and boundary violations should remain `0`.
+The worker persists rendered actions but does not claim delivery. A real channel adapter must send the content and acknowledge the durable action ID.
 
-## Repository layout
+## Python API
 
-```text
-src/companion_kernel/
-├── types.py       # Shared enums
-├── config.py      # Configuration layers and write authority
-├── clock.py       # System clock and FakeClock
-├── events.py      # Immutable events and JSONL event store
-├── drives.py      # Six-drive homeostasis engine
-├── emotions.py    # Emotion and mood appraisal
-├── relationship.py # Multi-dimensional relationship state and slow evolution
-├── policy.py      # Hard boundaries and candidate scoring
-├── model_backend.py  # Model context, candidate protocol, and backend factory
-├── ollama_backend.py # Local Ollama backend
-├── openai_backend.py # OpenAI Responses API backend
-├── permissions.py # Agent tool permission profiles
-├── safety.py      # Independent conservative safety checker
-├── evaluation.py  # Independent intrusion and repetition cost calibration
-├── agent_runtime.py # Model, permissions, and kernel coordinator
-├── agent_cli.py   # Local interactive chat CLI
-├── state.py       # Canonical state and checksummed snapshots
-├── audit.py       # Structured decision audit
-├── kernel.py      # Reducer, replay, and runtime entry point
-└── simulation.py  # Longitudinal simulator and CLI
+```python
+from datetime import UTC, datetime
+from pathlib import Path
+
+from companion_kernel import AgentRuntime, ConfigStore, KernelEvent, PersonalityKernel
+from companion_kernel.clock import SystemClock
+from companion_kernel.config import ModelSettings
+from companion_kernel.model_backend import create_model_backend
+from companion_kernel.types import EventKind
+
+runtime_dir = Path("./runtime")
+config = ConfigStore.open(runtime_dir)
+kernel = PersonalityKernel.open(runtime_dir, SystemClock(), config)
+backend = create_model_backend(ModelSettings(provider="ollama", model="<model>"))
+runtime = AgentRuntime(kernel, backend)
+
+event = KernelEvent("message-1", datetime.now(UTC), EventKind.USER_MESSAGE, {"message": "Hello"})
+result = runtime.handle_event(event)
+if result.response_text is not None and result.action_id is not None:
+    runtime.acknowledge_action(result.action_id, outcome="delivered", at=datetime.now(UTC))
 ```
 
-## Safety boundary
+Unknown or forged action IDs are rejected, and repeated delivery acknowledgement is idempotent.
 
-Model output is untrusted candidate input and must pass through the runtime policy gate. Concrete
-intrusion and repetition cost floors are derived from trusted context, and model-estimated benefits
-are bounded before scoring. The model cannot construct core events, rewrite drives, disable safety
-policies, or obtain external-tool access.
-Proactive-versus-reactive mode is derived from a trusted event kind rather than self-declared by the model.
+## Design boundary
 
-The system must not use guilt, threats, jealousy, false vulnerability, self-harm suggestions, or
-exclusivity to obtain a response from the user.
-
-## Roadmap
-
-1. Improve safety evaluation, add semantic memory, and add model routing.
-2. Add user-controlled semantic and episodic memory services above bounded recent history.
-3. Add background reflection, message generation, and external delivery adapters.
-4. Add Web/App/IM channels and a visual audit interface.
+The model cannot mutate core events, identity, drives, relationship state, policy, or the Outbox. The default dialogue profile grants no file, shell, or external-service tools. Waiting and internal reflection are valid outcomes; the runtime does not optimize for interaction time or require the user to respond.
 
 ## License
 
-No open-source license has been selected yet. The source is public, but copyright remains with the
-author until a license file is added.
+No open-source license has been selected. The source is publicly visible, but all rights remain reserved until a license is added.

@@ -1,5 +1,7 @@
 # Deterministic Companion Personality Kernel Implementation Plan
 
+> 历史实施计划说明：本文记录初版实现过程。2026-08-12 的架构重构已将“每 24 小时固定一条、未回复永久锁定”替换为可配置短期节奏和 72 小时未回复冷却；30/180 天仅是测试窗口，不构成运行限制。当前行为以 README、代码和最新设计规格为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 构建一个不依赖 LLM 的确定性人格内核，用事件、虚拟时钟、六种内稳态需求、情绪评价、权限配置、硬边界和可重放审计来产生可测试的行动倾向。

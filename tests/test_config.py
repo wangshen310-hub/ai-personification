@@ -37,7 +37,7 @@ def test_user_limit_cannot_exceed_system_limit() -> None:
 
     with pytest.raises(ValueError, match="system maximum"):
         store.replace_user(
-            UserSettings(timezone="Asia/Shanghai", proactive_limit_per_24h=2),
+            UserSettings(timezone="Asia/Shanghai", proactive_limit_per_24h=4),
             ConfigActor.USER,
         )
 

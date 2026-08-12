@@ -6,7 +6,7 @@ from companion_kernel.agent_runtime import AgentRunResult, AgentRuntime
 from companion_kernel.events import KernelEvent
 from companion_kernel.evaluation import ConservativeProposalEvaluator, ProposalEvaluator
 from companion_kernel.kernel import PersonalityKernel
-from companion_kernel.config import ModelSettings, PersonaProfile
+from companion_kernel.config import ConfigStore, ModelSettings, PersonaProfile
 from companion_kernel.model_backend import (
     CandidateProposal,
     ModelAdapter,
@@ -19,6 +19,9 @@ from companion_kernel.model_backend import (
 from companion_kernel.permissions import DIALOGUE_PERMISSIONS, PermissionProfile
 from companion_kernel.policy import CandidateIntent
 from companion_kernel.relationship import RelationshipState
+from companion_kernel.motivation import MotivationEngine, NativeIntent
+from companion_kernel.semantics import SemanticFact, SemanticInterpreter
+from companion_kernel.storage import OutboxAction, SQLiteRuntimeStore
 
 if TYPE_CHECKING:
     from companion_kernel.simulation import SimulationRunner
@@ -30,16 +33,23 @@ __all__ = [
     "CandidateProposal",
     "DIALOGUE_PERMISSIONS",
     "ConservativeProposalEvaluator",
+    "ConfigStore",
     "KernelEvent",
     "ModelBackend",
     "ModelAdapter",
     "ModelContext",
     "ModelSettings",
     "ModelTurn",
+    "MotivationEngine",
+    "NativeIntent",
+    "OutboxAction",
     "PersonaProfile",
     "PermissionProfile",
     "ProposalEvaluator",
     "RelationshipState",
+    "SQLiteRuntimeStore",
+    "SemanticFact",
+    "SemanticInterpreter",
     "PersonalityKernel",
     "SimulationRunner",
     "ToolRequest",

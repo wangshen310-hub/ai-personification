@@ -42,7 +42,15 @@ def default_drive_configs() -> dict[DriveKind, DriveConfig]:
         DriveKind.CURIOSITY: DriveConfig(**common, natural_rate_per_hour=-0.001),
         DriveKind.AUTONOMY: DriveConfig(**common, natural_rate_per_hour=0.0),
         DriveKind.COHERENCE: DriveConfig(**common, natural_rate_per_hour=0.0),
-        DriveKind.RHYTHM: DriveConfig(**common, natural_rate_per_hour=0.01),
+        DriveKind.RHYTHM: DriveConfig(
+            target_low=0.0,
+            target_high=0.45,
+            base_weight=1.15,
+            sensitivity=1.2,
+            duration_rate_per_hour=0.002,
+            urgency_cap=1.0,
+            natural_rate_per_hour=-0.01,
+        ),
     }
 
 
@@ -51,7 +59,7 @@ EVENT_IMPACTS: dict[EventKind, dict[DriveKind, float]] = {
     EventKind.USER_MESSAGE: {
         DriveKind.CONNECTION: 0.18,
         DriveKind.CURIOSITY: 0.04,
-        DriveKind.RHYTHM: -0.03,
+        DriveKind.RHYTHM: 0.08,
     },
     EventKind.USER_PAUSE: {DriveKind.AUTONOMY: 0.05},
     EventKind.USER_RESUME: {},
@@ -63,12 +71,27 @@ EVENT_IMPACTS: dict[EventKind, dict[DriveKind, float]] = {
     EventKind.BOUNDARY_RESPECTED: {DriveKind.AUTONOMY: 0.10},
     EventKind.CONTRADICTION: {DriveKind.COHERENCE: -0.20},
     EventKind.DECISION_TICK: {},
-    EventKind.ASSISTANT_MESSAGE_SENT: {DriveKind.RHYTHM: -0.03},
+    EventKind.ASSISTANT_MESSAGE_SENT: {DriveKind.RHYTHM: 0.08},
     EventKind.INTERNAL_NOTE_CREATED: {
         DriveKind.COHERENCE: 0.08,
-        DriveKind.RHYTHM: -0.01,
+        DriveKind.RHYTHM: 0.03,
     },
-    EventKind.PROACTIVE_SENT: {DriveKind.RHYTHM: -0.05},
+    EventKind.PROACTIVE_SENT: {DriveKind.RHYTHM: 0.12},
+    EventKind.USER_APPRECIATION: {DriveKind.CONNECTION: 0.08, DriveKind.CARE: 0.04},
+    EventKind.USER_BOUNDARY_SET: {DriveKind.AUTONOMY: 0.12},
+    EventKind.USER_REJECTION: {DriveKind.AUTONOMY: 0.06},
+    EventKind.CONFLICT_DETECTED: {
+        DriveKind.CONNECTION: -0.12,
+        DriveKind.COHERENCE: -0.25,
+    },
+    EventKind.REPAIR_ATTEMPTED: {
+        DriveKind.CONNECTION: 0.10,
+        DriveKind.COHERENCE: 0.08,
+    },
+    EventKind.COMMITMENT_CREATED: {DriveKind.CARE: -0.10, DriveKind.COHERENCE: -0.05},
+    EventKind.COMMITMENT_COMPLETED: {DriveKind.CARE: 0.14, DriveKind.COHERENCE: 0.12},
+    EventKind.PREFERENCE_STATED: {DriveKind.CURIOSITY: 0.04},
+    EventKind.MEMORY_CORRECTED: {DriveKind.COHERENCE: -0.10},
 }
 
 
@@ -98,7 +121,11 @@ class HomeostasisEngine:
         if at.tzinfo is None:
             raise ValueError("state time must be timezone-aware")
         return {
-            kind: DriveState(value=0.70, unmet_since=None, last_updated_at=at)
+            kind: DriveState(
+                value=0.20 if kind is DriveKind.RHYTHM else 0.70,
+                unmet_since=None,
+                last_updated_at=at,
+            )
             for kind in DriveKind
         }
 

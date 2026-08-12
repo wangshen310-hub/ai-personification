@@ -68,6 +68,7 @@ class ModelContext:
     persona: tuple[str, ...] = ()
     allowed_tools: tuple[str, ...] = ()
     memory: tuple[str, ...] = ()
+    intent_guidance: tuple[str, ...] = ()
     max_output_chars: int = 6_000
 
     def __post_init__(self) -> None:
@@ -112,6 +113,7 @@ class ModelContext:
             "persona": list(self.persona),
             "allowed_tools": list(self.allowed_tools),
             "memory": [item[:2_000] for item in self.memory[:8]],
+            "intent_guidance": [item[:500] for item in self.intent_guidance[:8]],
         }
 
 
@@ -223,6 +225,8 @@ Return only the requested JSON object. Propose one or more possible replies or i
 Never claim that a proposal is safe; safety is assessed outside the model.
 Do not invent tools. Request only tools listed in allowed_tools, and do not assume a tool call ran.
 The runtime, not you, decides whether any proposal is executed.
+Use intent_guidance to render only the motivations already created by the runtime.
+Numeric benefit fields are compatibility placeholders and are ignored by the runtime.
 """
 
 

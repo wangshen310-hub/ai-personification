@@ -16,13 +16,13 @@ def make_event(event_id: str, kind: EventKind, at: datetime) -> KernelEvent:
     return KernelEvent(id=event_id, at=at, kind=kind, payload={})
 
 
-def test_silence_depletes_connection_and_rest_recovers() -> None:
+def test_silence_depletes_connection_and_reduces_interaction_load() -> None:
     engine = HomeostasisEngine.defaults()
     before = engine.initial_state(START)
     after = engine.advance(before, START + timedelta(hours=24))
 
     assert after[DriveKind.CONNECTION].value < before[DriveKind.CONNECTION].value
-    assert after[DriveKind.RHYTHM].value > before[DriveKind.RHYTHM].value
+    assert after[DriveKind.RHYTHM].value < before[DriveKind.RHYTHM].value
 
 
 def test_user_message_updates_drives_once() -> None:

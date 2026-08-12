@@ -15,7 +15,7 @@ def event(index: int, kind: EventKind) -> KernelEvent:
 def test_relationship_grows_slowly_from_reciprocal_dialogue() -> None:
     state = RelationshipState.initial()
     for index in range(5):
-        state = evolve_relationship(state, event(index, EventKind.USER_MESSAGE))
+        state = evolve_relationship(state, event(index, EventKind.USER_APPRECIATION))
         state = evolve_relationship(state, event(index + 10, EventKind.ASSISTANT_MESSAGE_SENT))
 
     assert 0.05 < state.familiarity < 0.20

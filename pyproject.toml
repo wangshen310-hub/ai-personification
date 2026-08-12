@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,6 +11,7 @@ dependencies = []
 
 [project.scripts]
 companion-chat = "companion_kernel.agent_cli:main"
+companion-worker = "companion_kernel.worker:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]

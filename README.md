@@ -2,126 +2,118 @@
 
 [中文](README.md) · [English](README_EN.md)
 
-这个项目想做一件事，让陪伴型 AI 在长期对话里保持连续。
+一个具有模型外动力、持久人格和后台主动性的长期陪伴 AI 运行时。
 
-模型很擅长生成下一句话，却不会自动记住一段关系怎样变化。用户暂停过什么、上次主动消息有没有得到回复、最近哪些需求一直没有满足，这些内容如果只放在上下文里，很容易丢失。
+它不是把“人设”塞进提示词。程序负责保存人格、需求、关系、记忆证据和行动状态；模型只负责理解语言和实现表达，不能凭自评分制造行动理由。
 
-所以我把这些信息放进一个独立的 Python 运行时。模型负责理解消息和组织语言，运行时负责保存状态、检查限制，再决定这次要不要行动。
-
-## 它怎么工作
+## 核心机制
 
 ![AI Personification system overview](companion-system-architecture.svg)
 
-完整运行逻辑如下。模型负责提出可能性，持久人格内核负责状态、关系和最终决策；只有确认成功的行动才会反过来改变人格。
-
 ![AI Personification runtime flow](companion-runtime-flow.svg)
 
-一次对话大致会经过下面几步。
+每个周期都必须形成一个决定，但外部发消息不是必须的：
 
-1. 用户消息或时间变化先记录成事件。
-2. 事件推动状态、需求和情绪变化。
-3. 模型根据有限的上下文提出回复候选。
-4. 策略层检查安全、权限、主动联系限制和打扰成本。
-5. 系统选择发送、等待、内部记录或不行动，并保存这次决策。
+1. 用户消息或时间变化写入 SQLite 事件日志。
+2. 语义解释器从语言中提取感谢、边界、拒绝、冲突、修复、承诺、偏好和纠错等带来源与置信度的事件。
+3. 内稳态引擎更新联结、关怀、好奇、自主、一致性和互动负荷。
+4. 动力引擎在模型之外生成回应、主动联系、内部整理和等待等原生意图。
+5. 模型只为内核允许的意图生成候选表达；模型自报的收益与关系评分不会进入最终决策。
+6. 策略层比较需求缓解、关系状态、互动负荷、打扰成本和边界。
+7. 选中动作先写入 Outbox；只有消息通道使用真实 `action_id` 确认送达后，结果才改变人格状态。
 
-主动联系也遵守同样的流程。用户暂停、处于安静时间、没有回复上一条主动消息时，系统不会继续打扰。
+## 已实现
 
-## 为什么不只用提示词
+- SQLite WAL 事务事件仓库，事件 ID 唯一约束，多进程写入不会制造重复事件。
+- 旧 `events.jsonl` 在首次打开新版运行目录时自动导入。
+- 可跨重启保存的名字、特质、价值、表达风格、用户时区和学习参数。
+- 六种有界状态；其中互动负荷与联结等促进型需求分开建模。
+- 内核原生意图生成。零需求时模型不能靠自评分主动联系，高需求时内核会产生联系机会。
+- 证据化关系变化。普通或空消息不会自动增加信任；冲突、感谢、边界和修复产生不同影响。
+- 带来源、置信度和确认状态的轻量语义记忆。
+- 每积累多次可信证据后才小幅调整需求权重的人格学习。
+- 持久 Outbox，支持 `rendered`、`delivered`、`failed` 和 `cancelled`；暂停会取消未执行动作。
+- 主动联系的安静时间、可配置的 24 小时节奏上限，以及未回复后的 72 小时冷却再评估。
+- Ollama、OpenAI Responses API 和已登录 Codex CLI 三种模型后端。
+- 交互式聊天 CLI、后台 Worker、结构化审计和 30/180 天模拟。
 
-提示词可以告诉模型应该用什么语气，不能可靠地保存长期状态。程序更适合处理这些事情。
+当前仍是单用户、单人格、文字通道内核。完整语义/情景记忆检索、实际第三方消息通道、网页界面和多用户隔离尚未实现。
 
-- 同一个事件只处理一次。
-- 需求会随着时间变化。
-- 暂停和安全限制不会被高需求绕过。
-- 每次行动都能查到原因。
-- 更换模型不会清空原来的状态。
+## 安装
 
-项目里的几个主要部分如下。
-
-| 部分 | 作用 |
-| --- | --- |
-| `Companion Runtime` | 保存事件、时钟、状态、需求、情绪、策略和审计记录 |
-| `ModelBackend` | 调用本地或远程模型，返回回复和动作候选 |
-| 消息适配器 | 发送已经通过策略检查的结果 |
-
-模型可以提出一条问候语，不能自己改状态或发消息。
-
-## 当前版本
-
-现在已经可以运行这些内容。
-
-- 六种需求：联结、关怀、好奇、自主、一致性和节律。
-- 稳定的名字、特质、价值和表达风格，可与模型实现解耦。
-- 熟悉度、信任、互惠和边界清晰度组成的多维关系状态。
-- 基于事件的情绪和心境变化。
-- 暂停、安静时间、主动消息频率上限和未回复锁定。
-- JSONL 事件日志、状态快照、事件重放和决策审计。
-- 已确认执行的回复和内部记录会写回事件日志，形成行动反馈。
-- 最近对话会在模型进程或程序重启后恢复，并用于重复度检查。
-- Ollama 本地模型后端。
-- OpenAI Responses API 后端，可以接入 Codex 一类的模型。
-- 默认只有对话权限的 Agent。模型提出的文件、Shell 和外部服务请求不会执行。
-- 命令行聊天和 180 天模拟。
-
-长期语义记忆、网页界面和外部消息通道还没有加入。当前只保存有界的近期对话，不会把推测自动升级为长期事实。
-
-## 使用本地模型
-
-先在本机启动 Ollama，然后安装项目。
+需要 Python 3.12 或更高版本。
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/companion-chat --provider ollama --model '<your-local-model>'
+.venv/bin/python -m pytest -q -W error
 ```
 
-可以在启动时定义一个稳定且可辨识的人格：
+## 对话
+
+本地 Ollama：
 
 ```bash
-.venv/bin/companion-chat --provider ollama --model '<your-local-model>' \\
-  --persona-name 'Mira' \\
-  --persona-trait 'playful' --persona-trait 'direct' \\
-  --persona-value 'honesty' --persona-value 'curiosity' \\
+.venv/bin/companion-chat --provider ollama --model '<your-local-model>' \
+  --runtime ./runtime \
+  --persona-name 'Mira' \
+  --persona-trait 'playful' --persona-trait 'direct' \
+  --persona-value 'honesty' --persona-value 'curiosity' \
   --persona-style 'short, vivid, and opinionated'
 ```
 
-这些人格锚点每轮都会进入模型上下文；关系状态则由已确认事件缓慢更新，不由模型自行宣布“关系升级”。
+后续启动可以省略人格参数，程序会从 `runtime/runtime.db` 恢复原人格。
 
-模型服务停机、返回格式错误或没有通过安全检查时，运行时会保留事件并选择不行动。
-
-## 使用 Codex 或其他远程模型
-
-这种方式会把模型请求发送到远程 API。状态、日志和策略仍然保存在本地。
+OpenAI Responses API：
 
 ```bash
-OPENAI_API_KEY='...' .venv/bin/companion-chat \\
-  --provider openai_responses --model '<openai-codex-model>'
+OPENAI_API_KEY='...' .venv/bin/companion-chat \
+  --provider openai_responses --model '<model-id>' --runtime ./runtime
 ```
 
-也可以复用本机已经登录的 Codex CLI，不需要另设 API Key：
+复用本机 Codex 登录：
 
 ```bash
-.venv/bin/companion-chat \\
-  --provider codex_cli --model 'gpt-5.6-sol'
+.venv/bin/companion-chat \
+  --provider codex_cli --model 'gpt-5.6-sol' --runtime ./runtime
 ```
 
-这个后端使用 `codex exec` 的临时会话、只读沙箱和结构化输出。Codex 在空的临时目录中运行，最终候选仍由本项目的权限、安全和人格策略进行筛选。
+## 后台运行
 
-## 在 Python 中调用
+不需要先开发 GUI。聊天进程和后台 Worker 可以使用同一个运行目录：
+
+```bash
+.venv/bin/companion-worker \
+  --provider ollama --model '<your-local-model>' \
+  --runtime ./runtime --interval-seconds 3600
+```
+
+只运行一个后台周期：
+
+```bash
+.venv/bin/companion-worker \
+  --provider ollama --model '<your-local-model>' \
+  --runtime ./runtime --once
+```
+
+Worker 只生成并持久化待执行动作，不假装消息已经送达。实际通道读取 Outbox、发送消息，再按 `action_id` 确认。
+
+## Python API
 
 ```python
 from datetime import UTC, datetime
 from pathlib import Path
 
-from companion_kernel import AgentRuntime, KernelEvent, PersonalityKernel, create_model_backend
+from companion_kernel import AgentRuntime, ConfigStore, KernelEvent, PersonalityKernel
 from companion_kernel.clock import SystemClock
-from companion_kernel.config import ConfigStore, ModelSettings
+from companion_kernel.config import ModelSettings
+from companion_kernel.model_backend import create_model_backend
 from companion_kernel.types import EventKind
 
-backend = create_model_backend(
-    ModelSettings(provider="ollama", model="<your-local-model>")
-)
-kernel = PersonalityKernel.open(Path("./runtime"), SystemClock(), ConfigStore.defaults())
+runtime_dir = Path("./runtime")
+config = ConfigStore.open(runtime_dir)
+backend = create_model_backend(ModelSettings(provider="ollama", model="<model>"))
+kernel = PersonalityKernel.open(runtime_dir, SystemClock(), config)
 runtime = AgentRuntime(kernel, backend)
 
 event = KernelEvent(
@@ -131,61 +123,59 @@ event = KernelEvent(
     {"message": "你好"},
 )
 result = runtime.handle_event(event)
-print(result.response_text)
 
-# 只有消息真正展示或送达后才确认；重复确认是幂等的。
-if result.response_text is not None:
-    runtime.acknowledge_action(event, result, at=datetime.now(UTC))
+# 消息通道真正展示或送达之后再确认。
+if result.response_text is not None and result.action_id is not None:
+    runtime.acknowledge_action(
+        result.action_id,
+        outcome="delivered",
+        at=datetime.now(UTC),
+    )
 ```
 
-## 快速验证
+不存在或伪造的 `action_id` 会被拒绝；重复确认是幂等的。
+
+## 验证
 
 ```bash
 .venv/bin/python -m pytest -q -W error
-.venv/bin/python -m companion_kernel.simulation --days 180 --seed 42
+
+# 沉默用户：未回复时降频，但冷却结束后仍可重新评估。
+.venv/bin/python -m companion_kernel.simulation \
+  --days 30 --seed 7 --reply-every-days 0
+
+# 每日互动的长期场景。
+.venv/bin/python -m companion_kernel.simulation \
+  --days 180 --seed 42 --reply-every-days 1
 ```
 
-模拟器使用临时目录。需求值应保持在 `[0, 1]`，边界违规数应为 `0`。
-
-## 安全边界
-
-模型输出先经过结构校验、权限检查、安全评估和独立成本校准，再交给策略层。重复度和最低打扰成本由程序根据已确认的历史计算；模型自报的正向收益在评分中有明确上限。模型不能构造核心事件、改写需求、关闭安全策略，也不能自行获得工具权限。
-
-主动联系还是响应用户，由事件类型决定。系统不会用内疚、威胁、嫉妒、虚假脆弱、自伤暗示或排他性依赖来换取用户回复。
+预期结果：测试全部通过、需求值保持在 `[0, 1]`、边界违规数为 `0`。30 天和 180 天只是测试窗口，不参与任何行动限制；系统也没有人格生命周期内的主动消息总次数上限。
 
 ## 代码结构
 
 ```text
 src/companion_kernel/
-├── types.py          # 跨模块枚举
-├── config.py         # 配置层与写入权限
-├── clock.py          # 系统时钟与 FakeClock
-├── events.py         # 不可变事件与 JSONL 事件仓库
-├── drives.py         # 六种需求的稳态计算
-├── emotions.py       # 情绪与心境评价
-├── relationship.py   # 多维关系状态与缓慢演化
-├── policy.py         # 硬边界与候选评分
-├── model_backend.py  # 模型上下文、候选协议和后端工厂
-├── ollama_backend.py # Ollama 本地后端
-├── openai_backend.py # OpenAI Responses API 后端
-├── permissions.py    # Agent 工具权限配置
-├── safety.py         # 独立的安全检查器
-├── evaluation.py     # 独立的打扰成本与重复度校准
-├── agent_runtime.py  # 模型、权限和内核协调器
-├── agent_cli.py      # 本地交互式聊天 CLI
-├── state.py          # 状态与校验和快照
-├── audit.py          # 决策审计
-├── kernel.py         # reducer、重放与内核入口
-└── simulation.py     # 长期模拟与 CLI
+├── storage.py       # SQLite 事件、配置、语义记忆和 Outbox
+├── drives.py        # 需求与互动负荷
+├── semantics.py     # 证据化语言解释
+├── motivation.py    # 内核原生意图生成
+├── relationship.py  # 关系状态与语义事件演化
+├── emotions.py      # 情绪与心境
+├── policy.py        # 硬边界和最终仲裁
+├── agent_runtime.py # 解释、动力、模型、策略和 Outbox 协调
+├── worker.py        # 后台主动周期
+├── agent_cli.py     # 交互式聊天
+├── model_backend.py # 模型协议与后端工厂
+├── kernel.py        # 状态归约、重放和审计
+└── simulation.py    # 真实运行链路的长期模拟
 ```
 
-## 后续计划
+## 设计边界
 
-1. 增强独立安全评估。
-2. 在近期对话和关系状态之上加入用户可控制的语义记忆。
-3. 增加消息通道、发送反馈和网页界面。
-4. 为文件和代码操作增加沙箱与审批流程。
+模型不能修改事件、人格配置、需求、关系状态或 Outbox，也不能决定自己的收益。默认对话权限不包含文件、Shell 或外部服务工具。语义解释器是保守的确定性基线，可替换为更强的独立解释模型，但结果仍需保存来源、置信度和确认状态。
+
+项目没有把“互动时长”“必须留住用户”或“必须发消息”设置为终极奖励。系统必须作出决定，但等待和内部整理都是有效行动。
 
 ## 许可证
 
-仓库目前还没有选择开源许可证。代码已经公开，版权仍归作者所有，直到仓库加入许可证文件。
+仓库尚未选择开源许可证。代码可公开查看，但在添加许可证前仍保留全部版权。

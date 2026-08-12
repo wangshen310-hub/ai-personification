@@ -139,7 +139,11 @@ class PolicyEngine:
                 elif self._quiet(context):
                     reasons.append("quiet_hours")
                 if context.awaiting_reply:
-                    reasons.append("awaiting_reply")
+                    last_sent = max(context.proactive_sent_at, default=None)
+                    if last_sent is None or context.now - last_sent < timedelta(
+                        hours=self._system.unanswered_cooldown_hours
+                    ):
+                        reasons.append("unanswered_cooldown")
                 cutoff = context.now - timedelta(hours=24)
                 recent = sum(at > cutoff for at in context.proactive_sent_at)
                 limit = min(

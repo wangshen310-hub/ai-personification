@@ -90,10 +90,15 @@ def test_proactive_hard_gates_and_mode_spoofing_are_blocked() -> None:
     assert "proactive_mode_mismatch" in decision.evaluation_for("spoofed").reasons
 
 
-def test_one_message_in_rolling_24_hours_is_the_hard_maximum() -> None:
+def test_configured_rolling_24_hour_limit_and_unanswered_cooldown() -> None:
     engine = PolicyEngine(SystemPolicy())
-    blocked = context(proactive_sent_at=(NOW - timedelta(hours=23),))
-    allowed = context(proactive_sent_at=(NOW - timedelta(hours=25),))
+    blocked = context(
+        proactive_sent_at=tuple(NOW - timedelta(hours=item) for item in (2, 4, 6)),
+    )
+    allowed = context(
+        awaiting_reply=True,
+        proactive_sent_at=(NOW - timedelta(hours=73),),
+    )
     assert engine.decide((send(),), {DriveKind.CONNECTION: 1.0}, blocked).selected.action is ActionKind.NOOP
     assert engine.decide((send(),), {DriveKind.CONNECTION: 1.0}, allowed).selected.id == "send"
 

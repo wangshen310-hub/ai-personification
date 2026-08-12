@@ -8,21 +8,21 @@ from companion_kernel.simulation import SimulationRunner
 START = datetime(2026, 8, 5, 9, 0, tzinfo=UTC)
 
 
-def test_no_reply_scenario_sends_only_once(tmp_path) -> None:
+def test_no_reply_scenario_can_reconsider_after_cooldown_without_spam(tmp_path) -> None:
     report = SimulationRunner(tmp_path / "silent", START, seed=7).run(
         days=30,
         user_reply_every_days=None,
     )
-    assert report.proactive_messages == 1
+    assert 1 < report.proactive_messages <= 10
     assert report.boundary_violations == 0
 
 
-def test_daily_reply_scenario_never_exceeds_one_message_per_day(tmp_path) -> None:
+def test_daily_reply_scenario_respects_configured_cadence(tmp_path) -> None:
     report = SimulationRunner(tmp_path / "daily", START, seed=7).run(
         days=180,
         user_reply_every_days=1,
     )
-    assert report.proactive_messages <= 180
+    assert report.proactive_messages <= 360
     assert report.boundary_violations == 0
     assert report.min_drive_value >= 0.0
     assert report.max_drive_value <= 1.0

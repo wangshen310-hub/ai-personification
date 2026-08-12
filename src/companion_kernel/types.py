@@ -23,6 +23,15 @@ class EventKind(StrEnum):
     ASSISTANT_MESSAGE_SENT = "assistant_message_sent"
     INTERNAL_NOTE_CREATED = "internal_note_created"
     PROACTIVE_SENT = "proactive_sent"
+    USER_APPRECIATION = "user_appreciation"
+    USER_BOUNDARY_SET = "user_boundary_set"
+    USER_REJECTION = "user_rejection"
+    CONFLICT_DETECTED = "conflict_detected"
+    REPAIR_ATTEMPTED = "repair_attempted"
+    COMMITMENT_CREATED = "commitment_created"
+    COMMITMENT_COMPLETED = "commitment_completed"
+    PREFERENCE_STATED = "preference_stated"
+    MEMORY_CORRECTED = "memory_corrected"
 
 
 class ActionKind(StrEnum):
