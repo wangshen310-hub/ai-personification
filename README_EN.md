@@ -6,6 +6,8 @@ A long-term companion runtime with model-external motivation, persistent identit
 
 The personality is not merely a prompt. The runtime owns identity, drives, relationship state, evidence-backed memory, decisions, and action delivery state. Language models interpret and render language, but cannot manufacture a reason to act through self-scoring.
 
+![AI Personification system overview](companion-system-architecture-en.svg)
+
 ## Runtime loop
 
 1. User input and time changes enter a transactional SQLite event log.

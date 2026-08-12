@@ -1,116 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="920" viewBox="0 0 1500 920" role="img" aria-labelledby="title desc">
   <title id="title">AI Personification runtime architecture</title>
-  <desc id="desc">A concise line diagram showing events entering the companion runtime, a bounded model agent proposing candidates, and the runtime policy gate deciding the final action.</desc>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#315d8c"/>
-    </marker>
-    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a98a8"/>
-    </marker>
-    <style>
-      .font { font-family: Inter, Arial, sans-serif; }
-      .title { font-size: 36px; font-weight: 760; letter-spacing: -0.5px; fill: #12263a; }
-      .subtitle { font-size: 18px; fill: #647386; }
-      .section { font-size: 13px; font-weight: 760; letter-spacing: 1.6px; fill: #6a798a; }
-      .heading { font-size: 21px; font-weight: 720; fill: #12263a; }
-      .body { font-size: 16px; fill: #45566a; }
-      .small { font-size: 13px; fill: #708095; }
-      .label { font-size: 13px; font-weight: 680; fill: #315d8c; }
-      .box { fill: #ffffff; stroke: #b8c4d1; stroke-width: 1.8; }
-      .runtime { fill: #f7faff; stroke: #315d8c; stroke-width: 2.3; }
-      .model { fill: #fbfdfd; stroke: #4b8582; stroke-width: 2.1; }
-      .accent { stroke: #315d8c; stroke-width: 2.2; fill: none; }
-      .muted-line { stroke: #8a98a8; stroke-width: 1.8; fill: none; }
-      .model-line { stroke: #4b8582; stroke-width: 1.9; fill: none; stroke-dasharray: 7 6; }
-    </style>
-  </defs>
-
-  <rect width="1500" height="820" fill="#fbfcfe"/>
-
-  <g class="font">
-    <text x="72" y="68" class="title">AI Personification</text>
-    <text x="72" y="103" class="subtitle">The runtime maintains personality state; the model proposes and policy decides</text>
-
-    <text x="72" y="178" class="section">01  INPUTS</text>
-    <rect x="72" y="202" width="246" height="286" rx="14" class="box"/>
-    <text x="102" y="244" class="heading">Event sources</text>
-    <line x1="102" y1="263" x2="288" y2="263" stroke="#d4dce5" stroke-width="1.5"/>
-    <circle cx="108" cy="300" r="4" fill="#315d8c"/>
-    <text x="124" y="306" class="body">User messages</text>
-    <circle cx="108" cy="344" r="4" fill="#315d8c"/>
-    <text x="124" y="350" class="body">Time and important dates</text>
-    <circle cx="108" cy="388" r="4" fill="#315d8c"/>
-    <text x="124" y="394" class="body">Pauses, replies, feedback</text>
-    <circle cx="108" cy="432" r="4" fill="#315d8c"/>
-    <text x="124" y="438" class="body">External channel events</text>
-    <text x="102" y="466" class="small">Converted into immutable, deduplicated events</text>
-
-    <text x="382" y="178" class="section">02  COMPANION RUNTIME</text>
-    <rect x="382" y="202" width="684" height="396" rx="16" class="runtime"/>
-    <text x="416" y="244" class="heading">Deterministic personality kernel</text>
-    <text x="416" y="271" class="small">The single source of truth for facts, state, permissions, and audit</text>
-    <line x1="416" y1="290" x2="1032" y2="290" stroke="#c9d8e8" stroke-width="1.5"/>
-
-    <rect x="416" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="440" y="354" class="heading">Events &amp; clock</text>
-    <text x="440" y="380" class="small">reducer · replay</text>
-
-    <rect x="630" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="654" y="354" class="heading">State &amp; drives</text>
-    <text x="654" y="380" class="small">emotion · mood</text>
-
-    <rect x="844" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="868" y="354" class="heading">Audit &amp; snapshots</text>
-    <text x="868" y="380" class="small">audit · persistence</text>
-
-    <path d="M604 363 H630" class="accent" marker-end="url(#arrow)"/>
-    <path d="M818 363 H844" class="accent" marker-end="url(#arrow)"/>
-
-    <rect x="416" y="442" width="616" height="110" rx="11" fill="#ffffff" stroke="#315d8c" stroke-width="2"/>
-    <text x="440" y="479" class="heading">Policy gate</text>
-    <text x="440" y="507" class="body">Safety · permission boundaries · proactive limits · candidate scoring</text>
-    <text x="440" y="532" class="small">The model cannot directly change state, send messages, or run tools</text>
-
-    <path d="M510 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
-    <path d="M724 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
-    <path d="M938 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
-
-    <text x="1160" y="178" class="section">03  MODEL AGENT</text>
-    <rect x="1160" y="202" width="268" height="286" rx="14" class="model"/>
-    <text x="1190" y="244" class="heading">Model backends</text>
-    <line x1="1190" y1="263" x2="1398" y2="263" stroke="#cfe0df" stroke-width="1.5"/>
-    <rect x="1190" y="292" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="324" class="body">Ollama · local model</text>
-    <rect x="1190" y="358" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="390" class="body">Codex · remote API</text>
-    <text x="1190" y="447" class="small">Structured candidates and drafts</text>
-
-    <path d="M318 345 H382" class="accent" marker-end="url(#arrow)"/>
-    <text x="350" y="328" text-anchor="middle" class="label">events</text>
-
-    <path d="M1066 300 H1120 V300 H1160" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="286" text-anchor="middle" class="label">bounded context</text>
-    <path d="M1160 436 H1120 V436 H1066" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="456" text-anchor="middle" class="label">proposals</text>
-
-    <path d="M724 598 V646" class="accent" marker-end="url(#arrow)"/>
-    <text x="752" y="626" class="label">final decision</text>
-    <text x="382" y="636" class="section">04  APPROVED OUTCOME</text>
-    <rect x="382" y="656" width="684" height="88" rx="14" class="box"/>
-    <text x="416" y="694" class="heading">Send</text>
-    <text x="416" y="720" class="small">Approved messages only</text>
-    <line x1="575" y1="675" x2="575" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="616" y="694" class="heading">Wait</text>
-    <text x="616" y="720" class="small">Preserve user space</text>
-    <line x1="778" y1="675" x2="778" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="820" y="694" class="heading">Internal note</text>
-    <text x="820" y="720" class="small">No user interruption</text>
-
-    <line x1="1160" y1="606" x2="1210" y2="606" class="accent" marker-end="url(#arrow)"/>
-    <text x="1224" y="611" class="small">Runtime control flow</text>
-    <line x1="1160" y1="638" x2="1210" y2="638" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1224" y="643" class="small">Model proposal flow</text>
-    <text x="1160" y="704" class="small">Principle: model suggests; runtime decides.</text>
+  <desc id="desc">Events and a background worker enter transactional SQLite persistence. Semantic interpretation and model-external motivation create native intents. A model renders text only, policy writes an Outbox action, and action-id delivery confirmation creates feedback.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#315d8c"/></marker><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b8582"/></marker><style>.f{font-family:Inter,Arial,sans-serif}.t{font-size:36px;font-weight:760;fill:#12263a}.s{font-size:18px;fill:#647386}.sec{font-size:13px;font-weight:760;letter-spacing:1.6px;fill:#6a798a}.h{font-size:20px;font-weight:720;fill:#12263a}.b{font-size:15px;fill:#45566a}.sm{font-size:13px;fill:#708095}.box{fill:#fff;stroke:#b8c4d1;stroke-width:1.7}.rt{fill:#f7faff;stroke:#315d8c;stroke-width:2.2}.m{fill:#fbfdfd;stroke:#4b8582;stroke-width:2}.p{fill:#f8f7ff;stroke:#7665a8;stroke-width:2}.flow{stroke:#315d8c;stroke-width:2;fill:none;marker-end:url(#a)}.mf{stroke:#4b8582;stroke-width:1.8;fill:none;stroke-dasharray:7 6;marker-end:url(#m)}.fb{stroke:#7665a8;stroke-width:1.8;fill:none;stroke-dasharray:6 5;marker-end:url(#a)}</style></defs>
+  <rect width="1500" height="920" fill="#fbfcfe"/><g class="f">
+    <text x="64" y="60" class="t">AI Personification</text><text x="64" y="94" class="s">The kernel creates motivation first; the model renders language; confirmed outcomes change state</text>
+    <text x="64" y="150" class="sec">01  EVENT SOURCES</text><rect x="64" y="174" width="250" height="282" rx="14" class="box"/><text x="92" y="214" class="h">Event sources</text><line x1="92" y1="230" x2="286" y2="230" stroke="#d4dce5"/><text x="92" y="266" class="b">User and channel input</text><text x="92" y="306" class="b">Pause, resume, delivery</text><text x="92" y="346" class="b">Time, commitments, dates</text><text x="92" y="386" class="b">Background worker cycles</text><text x="92" y="426" class="sm">30 / 180 days are tests only</text>
+    <text x="354" y="150" class="sec">02  PERSISTENCE</text><rect x="354" y="174" width="260" height="282" rx="14" class="p"/><text x="382" y="214" class="h">SQLite WAL</text><line x1="382" y1="230" x2="586" y2="230" stroke="#d8d2eb"/><text x="382" y="266" class="b">Unique event IDs</text><text x="382" y="306" class="b">Persona and user config</text><text x="382" y="346" class="b">Evidence memory and learning</text><text x="382" y="386" class="b">Audit and durable Outbox</text><text x="382" y="426" class="sm">Legacy JSONL auto-import</text>
+    <text x="654" y="150" class="sec">03  MODEL-EXTERNAL KERNEL</text><rect x="654" y="174" width="520" height="500" rx="16" class="rt"/><text x="684" y="214" class="h">Persistent personality kernel</text><text x="684" y="240" class="sm">Facts, motivation, relationships, and action authority stay outside the model</text><line x1="684" y1="258" x2="1144" y2="258" stroke="#c9d8e8"/>
+    <rect x="684" y="282" width="215" height="84" rx="10" class="box"/><text x="706" y="316" class="h">Semantics</text><text x="706" y="343" class="sm">source · confidence · status</text><rect x="929" y="282" width="215" height="84" rx="10" class="box"/><text x="951" y="316" class="h">Personality state</text><text x="951" y="343" class="sm">needs · load · affect · relation</text><path d="M899 324H929" class="flow"/>
+    <rect x="684" y="394" width="460" height="92" rx="10" class="box"/><text x="706" y="428" class="h">Native motivation and intent</text><text x="706" y="455" class="b">respond · check in · reflect · wait</text><path d="M1037 366V394" class="flow"/>
+    <rect x="684" y="514" width="460" height="124" rx="10" class="box"/><text x="706" y="548" class="h">Policy arbitration</text><text x="706" y="576" class="b">relief · relationship · load · intrusion · repetition</text><text x="706" y="603" class="sm">quiet hours · configurable 24h cadence · 72h unanswered cooldown</text><path d="M914 486V514" class="flow"/>
+    <text x="1214" y="150" class="sec">04  LANGUAGE MODEL</text><rect x="1214" y="174" width="230" height="282" rx="14" class="m"/><text x="1242" y="214" class="h">Language renderer</text><line x1="1242" y1="230" x2="1416" y2="230" stroke="#cfe0df"/><text x="1242" y="268" class="b">Ollama</text><text x="1242" y="304" class="b">OpenAI Responses</text><text x="1242" y="340" class="b">Codex CLI</text><text x="1242" y="384" class="sm">receives authorized intents</text><text x="1242" y="408" class="sm">returns wording only</text><text x="1242" y="432" class="sm">self-scores cannot add motive</text>
+    <path d="M1144 438H1184V278H1214" class="mf"/><path d="M1214 400H1184V568H1144" class="mf"/><path d="M314 315H354" class="flow"/><path d="M614 315H654" class="flow"/>
+    <text x="354" y="724" class="sec">05  ACTION DELIVERY</text><rect x="354" y="748" width="820" height="116" rx="14" class="p"/><text x="382" y="785" class="h">Durable Outbox</text><text x="382" y="816" class="b">rendered → queued → delivered / failed / cancelled</text><text x="382" y="842" class="sm">Pause cancels pending work; forged action IDs cannot mutate personality</text><rect x="927" y="772" width="217" height="66" rx="10" class="box"/><text x="1035" y="800" text-anchor="middle" class="h">Channel adapter</text><text x="1035" y="824" text-anchor="middle" class="sm">confirms by action_id</text><path d="M914 674V748" class="flow"/><path d="M905 806H927" class="flow"/><path d="M1035 864V904H334V480H484V456" class="fb"/><text x="756" y="892" text-anchor="middle" class="sm">Confirmed outcome events form the next personality state</text>
   </g>
 </svg>

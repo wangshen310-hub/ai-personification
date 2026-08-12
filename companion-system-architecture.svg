@@ -1,123 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820" role="img" aria-labelledby="title desc">
-  <title id="title">AI Personification runtime architecture</title>
-  <desc id="desc">A concise line diagram showing events entering the companion runtime, a bounded model agent proposing candidates, and the runtime policy gate deciding the final action.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="920" viewBox="0 0 1500 920" role="img" aria-labelledby="title desc">
+  <title id="title">AI Personification 新版运行架构</title>
+  <desc id="desc">事件与后台 Worker 进入 SQLite 持久层，经语义解释、人格状态和模型外动力生成原生意图；模型只负责表达，策略仲裁后写入 Outbox，并由 action_id 确认形成反馈。</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#315d8c"/>
-    </marker>
-    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a98a8"/>
-    </marker>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#315d8c"/></marker>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b8582"/></marker>
     <style>
-      .font { font-family: Inter, Arial, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
-      .title { font-size: 36px; font-weight: 760; letter-spacing: -0.5px; fill: #12263a; }
-      .subtitle { font-size: 18px; fill: #647386; }
-      .section { font-size: 13px; font-weight: 760; letter-spacing: 1.6px; fill: #6a798a; }
-      .heading { font-size: 21px; font-weight: 720; fill: #12263a; }
-      .body { font-size: 16px; fill: #45566a; }
-      .small { font-size: 13px; fill: #708095; }
-      .label { font-size: 13px; font-weight: 680; fill: #315d8c; }
-      .box { fill: #ffffff; stroke: #b8c4d1; stroke-width: 1.8; }
-      .runtime { fill: #f7faff; stroke: #315d8c; stroke-width: 2.3; }
-      .model { fill: #fbfdfd; stroke: #4b8582; stroke-width: 2.1; }
-      .accent { stroke: #315d8c; stroke-width: 2.2; fill: none; }
-      .muted-line { stroke: #8a98a8; stroke-width: 1.8; fill: none; }
-      .model-line { stroke: #4b8582; stroke-width: 1.9; fill: none; stroke-dasharray: 7 6; }
+      .font{font-family:Inter,Arial,"Noto Sans CJK SC","Microsoft YaHei",sans-serif}.title{font-size:36px;font-weight:760;fill:#12263a}.subtitle{font-size:18px;fill:#647386}.section{font-size:13px;font-weight:760;letter-spacing:1.6px;fill:#6a798a}.heading{font-size:20px;font-weight:720;fill:#12263a}.body{font-size:15px;fill:#45566a}.small{font-size:13px;fill:#708095}.label{font-size:13px;font-weight:680;fill:#315d8c}.box{fill:#fff;stroke:#b8c4d1;stroke-width:1.7}.runtime{fill:#f7faff;stroke:#315d8c;stroke-width:2.2}.model{fill:#fbfdfd;stroke:#4b8582;stroke-width:2}.persist{fill:#f8f7ff;stroke:#7665a8;stroke-width:2}.flow{stroke:#315d8c;stroke-width:2;fill:none;marker-end:url(#arrow)}.model-flow{stroke:#4b8582;stroke-width:1.8;fill:none;stroke-dasharray:7 6;marker-end:url(#arrow2)}.feedback{stroke:#7665a8;stroke-width:1.8;fill:none;stroke-dasharray:6 5;marker-end:url(#arrow)}
     </style>
   </defs>
-
-  <rect width="1500" height="820" fill="#fbfcfe"/>
-
+  <rect width="1500" height="920" fill="#fbfcfe"/>
   <g class="font">
-    <text x="72" y="68" class="title">AI Personification</text>
-    <text x="72" y="103" class="subtitle">人格状态由运行时维护；模型只提出候选，策略层决定行动</text>
+    <text x="64" y="60" class="title">AI Personification</text>
+    <text x="64" y="94" class="subtitle">人格内核先产生动机；模型只实现表达；真实执行结果才改变长期状态</text>
 
-    <!-- Input column -->
-    <text x="72" y="178" class="section">01  INPUTS</text>
-    <rect x="72" y="202" width="246" height="286" rx="14" class="box"/>
-    <text x="102" y="244" class="heading">事件入口</text>
-    <line x1="102" y1="263" x2="288" y2="263" stroke="#d4dce5" stroke-width="1.5"/>
-    <circle cx="108" cy="300" r="4" fill="#315d8c"/>
-    <text x="124" y="306" class="body">用户消息</text>
-    <circle cx="108" cy="344" r="4" fill="#315d8c"/>
-    <text x="124" y="350" class="body">时间与重要日期</text>
-    <circle cx="108" cy="388" r="4" fill="#315d8c"/>
-    <text x="124" y="394" class="body">暂停、回复与反馈</text>
-    <circle cx="108" cy="432" r="4" fill="#315d8c"/>
-    <text x="124" y="438" class="body">外部通道事件</text>
-    <text x="102" y="466" class="small">先转换为不可变、可去重事件</text>
+    <text x="64" y="150" class="section">01  EVENT SOURCES</text>
+    <rect x="64" y="174" width="250" height="282" rx="14" class="box"/>
+    <text x="92" y="214" class="heading">事件入口</text><line x1="92" y1="230" x2="286" y2="230" stroke="#d4dce5"/>
+    <text x="92" y="266" class="body">用户消息与通道反馈</text>
+    <text x="92" y="306" class="body">暂停、恢复与送达确认</text>
+    <text x="92" y="346" class="body">时间、承诺与重要事件</text>
+    <text x="92" y="386" class="body">后台 Worker 决策周期</text>
+    <text x="92" y="426" class="small">30 / 180 天仅为测试窗口</text>
 
-    <!-- Runtime -->
-    <text x="382" y="178" class="section">02  COMPANION RUNTIME</text>
-    <rect x="382" y="202" width="684" height="396" rx="16" class="runtime"/>
-    <text x="416" y="244" class="heading">确定性人格内核</text>
-    <text x="416" y="271" class="small">事实、状态、权限与审计的唯一来源</text>
-    <line x1="416" y1="290" x2="1032" y2="290" stroke="#c9d8e8" stroke-width="1.5"/>
+    <text x="354" y="150" class="section">02  PERSISTENCE</text>
+    <rect x="354" y="174" width="260" height="282" rx="14" class="persist"/>
+    <text x="382" y="214" class="heading">SQLite WAL</text><line x1="382" y1="230" x2="586" y2="230" stroke="#d8d2eb"/>
+    <text x="382" y="266" class="body">唯一事件 ID 与事务</text>
+    <text x="382" y="306" class="body">人格与用户配置</text>
+    <text x="382" y="346" class="body">证据记忆与学习参数</text>
+    <text x="382" y="386" class="body">决策审计与 Outbox</text>
+    <text x="382" y="426" class="small">旧 JSONL 首次打开自动导入</text>
 
-    <rect x="416" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="440" y="354" class="heading">事件与时钟</text>
-    <text x="440" y="380" class="small">reducer · replay</text>
+    <text x="654" y="150" class="section">03  MODEL-EXTERNAL KERNEL</text>
+    <rect x="654" y="174" width="520" height="500" rx="16" class="runtime"/>
+    <text x="684" y="214" class="heading">持久人格与动力内核</text>
+    <text x="684" y="240" class="small">事实、动机、关系和行动权威均在模型之外</text>
+    <line x1="684" y1="258" x2="1144" y2="258" stroke="#c9d8e8"/>
 
-    <rect x="630" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="654" y="354" class="heading">状态与需求</text>
-    <text x="654" y="380" class="small">drives · emotion · mood</text>
+    <rect x="684" y="282" width="215" height="84" rx="10" class="box"/>
+    <text x="706" y="316" class="heading">语义解释</text><text x="706" y="343" class="small">来源 · 置信度 · 确认状态</text>
+    <rect x="929" y="282" width="215" height="84" rx="10" class="box"/>
+    <text x="951" y="316" class="heading">人格状态</text><text x="951" y="343" class="small">需求 · 负荷 · 情绪 · 关系</text>
+    <path d="M899 324H929" class="flow"/>
 
-    <rect x="844" y="320" width="188" height="86" rx="11" class="box"/>
-    <text x="868" y="354" class="heading">审计与快照</text>
-    <text x="868" y="380" class="small">audit · persistence</text>
+    <rect x="684" y="394" width="460" height="92" rx="10" class="box"/>
+    <text x="706" y="428" class="heading">原生动力与意图生成</text>
+    <text x="706" y="455" class="body">回应 · 主动联系 · 内部整理 · 等待</text>
+    <path d="M1037 366V394" class="flow"/>
 
-    <path d="M604 363 H630" class="accent" marker-end="url(#arrow)"/>
-    <path d="M818 363 H844" class="accent" marker-end="url(#arrow)"/>
+    <rect x="684" y="514" width="460" height="124" rx="10" class="box"/>
+    <text x="706" y="548" class="heading">策略仲裁</text>
+    <text x="706" y="576" class="body">需求缓解 · 关系 · 互动负荷 · 打扰与重复</text>
+    <text x="706" y="603" class="small">安静时间 · 可配置 24h 节奏 · 未回复 72h 冷却再评估</text>
+    <path d="M914 486V514" class="flow"/>
 
-    <rect x="416" y="442" width="616" height="110" rx="11" fill="#ffffff" stroke="#315d8c" stroke-width="2"/>
-    <text x="440" y="479" class="heading">策略闸门</text>
-    <text x="440" y="507" class="body">安全检查 · 权限边界 · 主动联系限制 · 候选评分</text>
-    <text x="440" y="532" class="small">模型不能直接改状态、发消息或执行工具</text>
+    <text x="1214" y="150" class="section">04  LANGUAGE MODEL</text>
+    <rect x="1214" y="174" width="230" height="282" rx="14" class="model"/>
+    <text x="1242" y="214" class="heading">表达实现器</text><line x1="1242" y1="230" x2="1416" y2="230" stroke="#cfe0df"/>
+    <text x="1242" y="268" class="body">Ollama</text><text x="1242" y="304" class="body">OpenAI Responses</text><text x="1242" y="340" class="body">Codex CLI</text>
+    <text x="1242" y="384" class="small">接收已授权意图</text><text x="1242" y="408" class="small">只生成文字草稿</text><text x="1242" y="432" class="small">自评分不会改变收益</text>
 
-    <path d="M510 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
-    <path d="M724 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
-    <path d="M938 406 V442" class="muted-line" marker-end="url(#arrow-muted)"/>
+    <path d="M1144 438H1184V278H1214" class="model-flow"/><text x="1180" y="262" text-anchor="middle" class="label">意图指导</text>
+    <path d="M1214 400H1184V568H1144" class="model-flow"/><text x="1180" y="590" text-anchor="middle" class="label">表达草稿</text>
+    <path d="M314 315H354" class="flow"/><path d="M614 315H654" class="flow"/>
 
-    <!-- Model agent -->
-    <text x="1160" y="178" class="section">03  MODEL AGENT</text>
-    <rect x="1160" y="202" width="268" height="286" rx="14" class="model"/>
-    <text x="1190" y="244" class="heading">模型后端</text>
-    <line x1="1190" y1="263" x2="1398" y2="263" stroke="#cfe0df" stroke-width="1.5"/>
-    <rect x="1190" y="292" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="324" class="body">Ollama · 本地模型</text>
-    <rect x="1190" y="358" width="208" height="52" rx="9" fill="#ffffff" stroke="#9bc0bd" stroke-width="1.5"/>
-    <text x="1212" y="390" class="body">Codex · 远程 API</text>
-    <text x="1190" y="447" class="small">结构化候选与表达草稿</text>
-
-    <!-- Trusted input and model proposal flow -->
-    <path d="M318 345 H382" class="accent" marker-end="url(#arrow)"/>
-    <text x="350" y="328" text-anchor="middle" class="label">事件</text>
-
-    <path d="M1066 300 H1120 V300 H1160" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="286" text-anchor="middle" class="label">有限上下文</text>
-    <path d="M1160 436 H1120 V436 H1066" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1112" y="456" text-anchor="middle" class="label">候选提案</text>
-
-    <!-- Decision/output -->
-    <path d="M724 598 V646" class="accent" marker-end="url(#arrow)"/>
-    <text x="752" y="626" class="label">最终决策</text>
-    <text x="382" y="636" class="section">04  APPROVED OUTCOME</text>
-    <rect x="382" y="656" width="684" height="88" rx="14" class="box"/>
-    <text x="416" y="694" class="heading">发送</text>
-    <text x="416" y="720" class="small">仅发送已批准消息</text>
-    <line x1="575" y1="675" x2="575" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="616" y="694" class="heading">等待</text>
-    <text x="616" y="720" class="small">保留用户空间</text>
-    <line x1="778" y1="675" x2="778" y2="725" stroke="#d4dce5" stroke-width="1.5"/>
-    <text x="820" y="694" class="heading">内部记录</text>
-    <text x="820" y="720" class="small">不打扰用户</text>
-
-    <!-- Legend -->
-    <line x1="1160" y1="606" x2="1210" y2="606" class="accent" marker-end="url(#arrow)"/>
-    <text x="1224" y="611" class="small">运行时控制流</text>
-    <line x1="1160" y1="638" x2="1210" y2="638" class="model-line" marker-end="url(#arrow-muted)"/>
-    <text x="1224" y="643" class="small">模型提案流</text>
-    <text x="1160" y="704" class="small">原则：模型建议，运行时决定。</text>
-    <text x="1160" y="728" class="small">Principle: model suggests; runtime decides.</text>
+    <text x="354" y="724" class="section">05  ACTION DELIVERY</text>
+    <rect x="354" y="748" width="820" height="116" rx="14" class="persist"/>
+    <text x="382" y="785" class="heading">持久 Outbox</text>
+    <text x="382" y="816" class="body">rendered → queued → delivered / failed / cancelled</text>
+    <text x="382" y="842" class="small">暂停会取消待执行动作；伪造 action_id 无法改变人格</text>
+    <rect x="927" y="772" width="217" height="66" rx="10" class="box"/>
+    <text x="1035" y="800" text-anchor="middle" class="heading">消息通道</text><text x="1035" y="824" text-anchor="middle" class="small">按 action_id 确认送达</text>
+    <path d="M914 674V748" class="flow"/>
+    <path d="M905 806H927" class="flow"/>
+    <path d="M1035 864V904H334V480H484V456" class="feedback"/>
+    <text x="756" y="892" text-anchor="middle" class="small">确认结果事件形成下一轮人格状态</text>
   </g>
 </svg>

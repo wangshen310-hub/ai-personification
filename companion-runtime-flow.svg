@@ -1,247 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="2180" viewBox="0 0 900 2180" role="img" aria-labelledby="title desc">
-  <title id="title">AI Personification 运行逻辑</title>
-  <desc id="desc">深色 Mermaid 风格的长期陪伴运行闭环：外部事件进入持久人格内核，由模型生成候选，再经过策略评价、执行确认和反馈更新。</desc>
-  <defs>
-    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L7,3.5 L0,7 z" fill="#a2a2a2"/>
-    </marker>
-    <style>
-      .canvas { fill: #000; }
-      .group { fill: #111; stroke: #272727; stroke-width: 1; }
-      .node { fill: #1b1b1b; stroke: #444; stroke-width: 1; }
-      .node-strong { fill: #242424; stroke: #555; stroke-width: 1; }
-      .diamond { fill: #1b1b1b; stroke: #444; stroke-width: 1; }
-      .line { fill: none; stroke: #9b9b9b; stroke-width: 1.2; marker-end: url(#arrow); }
-      .line-soft { fill: none; stroke: #717171; stroke-width: 1; }
-      .loop { fill: none; stroke: #777; stroke-width: 1.1; stroke-dasharray: 4 4; marker-end: url(#arrow); }
-      .label { fill: #777; font: 400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; }
-      .text { fill: #d2d2d2; font: 400 15px -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; text-anchor: middle; }
-      .small { fill: #b7b7b7; font: 400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; text-anchor: middle; }
-      .edge-label { fill: #929292; font: 400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; text-anchor: middle; }
-    </style>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="2360" viewBox="0 0 900 2360" role="img" aria-labelledby="title desc">
+  <title id="title">AI Personification 新版完整运行逻辑</title>
+  <desc id="desc">深色 Mermaid 风格流程图：SQLite 事件、语义解释、持久人格、模型外动力、语言表达、策略仲裁、Outbox 与 action_id 送达确认形成长期闭环。</desc>
+  <defs><marker id="a" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7z" fill="#a2a2a2"/></marker><style>.bg{fill:#000}.g{fill:#111;stroke:#272727}.n{fill:#1b1b1b;stroke:#444}.s{fill:#242424;stroke:#555}.d{fill:#1b1b1b;stroke:#444}.l{fill:none;stroke:#9b9b9b;stroke-width:1.2;marker-end:url(#a)}.ls{fill:none;stroke:#717171;stroke-width:1}.loop{fill:none;stroke:#777;stroke-width:1.1;stroke-dasharray:4 4;marker-end:url(#a)}.gl{fill:#777;font:400 11px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif}.t{fill:#d2d2d2;font:400 15px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;text-anchor:middle}.sm{fill:#b7b7b7;font:400 12px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;text-anchor:middle}.e{fill:#929292;font:400 11px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;text-anchor:middle}</style></defs>
+  <rect class="bg" width="900" height="2360"/>
 
-  <rect class="canvas" x="0" y="0" width="900" height="2180"/>
+  <rect class="s" x="300" y="45" width="300" height="66"/><text class="t" x="450" y="71"><tspan x="450">外部事件 / 后台 Worker</tspan><tspan class="sm" x="450" dy="22">用户消息 · 时间 · 暂停 · 通道反馈</tspan></text>
+  <path class="l" d="M450 111V150"/><rect class="n" x="330" y="150" width="240" height="58"/><text class="t" x="450" y="175"><tspan x="450">SQLite WAL 事件事务</tspan><tspan class="sm" x="450" dy="20">唯一 event_id · 并发安全</tspan></text>
+  <path class="l" d="M450 208V244"/><polygon class="d" points="450,244 522,282 450,320 378,282"/><text class="sm" x="450" y="278">事件是否已存在？</text><text class="e" x="350" y="270">是</text><text class="e" x="470" y="337">否</text>
+  <path class="l" d="M378 282L246 334"/><rect class="n" x="76" y="308" width="170" height="52"/><text class="sm" x="161" y="339">返回幂等结果</text>
 
-  <!-- 外部输入与事件去重 -->
-  <rect class="node-strong" x="315" y="55" width="270" height="68" rx="2"/>
-  <text class="text" x="450" y="82">
-    <tspan x="450" dy="0">外部输入</tspan>
-    <tspan class="small" x="450" dy="23">用户消息 / 时间 / 暂停 / 关系事件</tspan>
-  </text>
+  <rect class="g" x="80" y="382" width="740" height="306"/><text class="gl" x="98" y="403">语义证据与持久状态</text>
+  <path class="l" d="M450 320V426"/><rect class="n" x="326" y="426" width="248" height="56"/><text class="t" x="450" y="450"><tspan x="450">保守语义解释</tspan><tspan class="sm" x="450" dy="20">感谢 / 边界 / 冲突 / 修复 / 承诺</tspan></text>
+  <rect class="n" x="104" y="510" width="182" height="60"/><text class="sm" x="195" y="535"><tspan x="195">证据记忆</tspan><tspan x="195" dy="19">来源 / 置信度 / 状态</tspan></text>
+  <rect class="n" x="359" y="510" width="182" height="60"/><text class="sm" x="450" y="535"><tspan x="450">需求与互动负荷</tspan><tspan x="450" dy="19">时间与结构化事件更新</tspan></text>
+  <rect class="n" x="614" y="510" width="182" height="60"/><text class="sm" x="705" y="535"><tspan x="705">关系与情绪</tspan><tspan x="705" dy="19">不按消息条数加信任</tspan></text>
+  <path class="ls" d="M390 482L195 510M450 482V510M510 482L705 510"/>
+  <path class="ls" d="M195 570L390 612M450 570V612M705 570L510 612"/><rect class="s" x="310" y="612" width="280" height="58"/><text class="t" x="450" y="637"><tspan x="450">持久人格状态快照</tspan><tspan class="sm" x="450" dy="20">身份 / 学习参数 / 关系 / 记忆</tspan></text>
 
-  <line class="line" x1="450" y1="123" x2="450" y2="171"/>
-  <rect class="node" x="345" y="171" width="210" height="58" rx="2"/>
-  <text class="text" x="450" y="196">
-    <tspan x="450" dy="0">不可变事件</tspan>
-    <tspan class="small" x="450" dy="20">唯一 ID / 时间 / 类型 / 数据</tspan>
-  </text>
+  <rect class="g" x="80" y="720" width="740" height="320"/><text class="gl" x="98" y="741">模型外：原生动力与意图</text>
+  <path class="l" d="M450 670V770"/><rect class="s" x="310" y="770" width="280" height="58"/><text class="t" x="450" y="795"><tspan x="450">计算需求压力与行动机会</tspan><tspan class="sm" x="450" dy="20">模型评分不能创造动机</tspan></text>
+  <path class="l" d="M385 828L175 884M430 828L355 884M470 828L545 884M515 828L725 884"/>
+  <rect class="n" x="100" y="884" width="150" height="54"/><text class="sm" x="175" y="916">回应用户</text><rect class="n" x="280" y="884" width="150" height="54"/><text class="sm" x="355" y="916">主动联系</text><rect class="n" x="470" y="884" width="150" height="54"/><text class="sm" x="545" y="916">内部整理</text><rect class="n" x="650" y="884" width="150" height="54"/><text class="sm" x="725" y="916">等待 / 不行动</text>
+  <path class="ls" d="M175 938L372 982M355 938L420 982M545 938L480 982M725 938L528 982"/><rect class="s" x="300" y="982" width="300" height="58"/><text class="t" x="450" y="1007"><tspan x="450">内核授权的意图集合</tspan><tspan class="sm" x="450" dy="20">零需求时不能凭模型自评主动发送</tspan></text>
 
-  <line class="line" x1="450" y1="229" x2="450" y2="264"/>
-  <polygon class="diamond" points="450,264 522,302 450,340 378,302"/>
-  <text class="small" x="450" y="298">
-    <tspan x="450" dy="0">事件是否已处理？</tspan>
-  </text>
-  <text class="edge-label" x="350" y="291">是</text>
-  <text class="edge-label" x="468" y="357">否</text>
+  <rect class="g" x="80" y="1072" width="740" height="270"/><text class="gl" x="98" y="1093">语言实现器</text>
+  <path class="l" d="M450 1040V1120"/><rect class="s" x="300" y="1120" width="300" height="62"/><text class="t" x="450" y="1146"><tspan x="450">LLM / Codex / Ollama</tspan><tspan class="sm" x="450" dy="21">只为已授权意图生成表达草稿</tspan></text>
+  <rect class="n" x="110" y="1215" width="185" height="60"/><text class="sm" x="202" y="1240"><tspan x="202">独立安全检查</tspan><tspan x="202" dy="19">模型不能自证安全</tspan></text><rect class="n" x="357" y="1215" width="185" height="60"/><text class="sm" x="450" y="1240"><tspan x="450">打扰成本校准</tspan><tspan x="450" dy="19">互动负荷 / 长度</tspan></text><rect class="n" x="604" y="1215" width="185" height="60"/><text class="sm" x="696" y="1240"><tspan x="696">重复度校准</tspan><tspan x="696" dy="19">已确认真实对话</tspan></text>
+  <path class="l" d="M390 1182L202 1215M450 1182V1215M510 1182L696 1215"/>
+  <path class="ls" d="M202 1275L390 1302M450 1275V1302M696 1275L510 1302"/><rect class="n" x="326" y="1302" width="248" height="40"/><text class="sm" x="450" y="1327">校准后的表达草稿</text>
 
-  <line class="line" x1="378" y1="302" x2="250" y2="352"/>
-  <rect class="node" x="80" y="326" width="170" height="52" rx="2"/>
-  <text class="small" x="165" y="357">忽略重复事件</text>
+  <rect class="g" x="80" y="1374" width="740" height="356"/><text class="gl" x="98" y="1395">策略仲裁</text>
+  <path class="l" d="M450 1342V1422"/><rect class="s" x="286" y="1422" width="328" height="64"/><text class="t" x="450" y="1448"><tspan x="450">内核收益 + 关系适配 - 成本</tspan><tspan class="sm" x="450" dy="21">与等待和不行动共同比较</tspan></text>
+  <rect class="n" x="105" y="1522" width="200" height="62"/><text class="sm" x="205" y="1547"><tspan x="205">硬边界</tspan><tspan x="205" dy="19">暂停 / 权限 / 安静时间</tspan></text><rect class="n" x="350" y="1522" width="200" height="62"/><text class="sm" x="450" y="1547"><tspan x="450">短期节奏</tspan><tspan x="450" dy="19">可配置 24h 上限</tspan></text><rect class="n" x="595" y="1522" width="200" height="62"/><text class="sm" x="695" y="1547"><tspan x="695">未回复降频</tspan><tspan x="695" dy="19">72h 冷却后重新评估</tspan></text>
+  <path class="ls" d="M350 1486L205 1522M450 1486V1522M550 1486L695 1522"/><path class="l" d="M205 1584L382 1630M450 1584V1630M695 1584L518 1630"/>
+  <polygon class="d" points="450,1610 520,1648 450,1686 380,1648"/><text class="sm" x="450" y="1644">选择外部动作？</text><text class="e" x="535" y="1634">否</text><text class="e" x="467" y="1702">是</text>
+  <path class="l" d="M520 1648H680"/><rect class="n" x="680" y="1622" width="115" height="52"/><text class="sm" x="737" y="1644"><tspan x="737">等待或</tspan><tspan x="737" dy="18">内部记录</tspan></text>
 
-  <!-- 模型外：持久人格内核 -->
-  <rect class="group" x="95" y="380" width="710" height="420" rx="1"/>
-  <text class="label" x="112" y="401">模型外：持久人格内核</text>
-
-  <line class="line" x1="450" y1="340" x2="450" y2="430"/>
-  <rect class="node" x="345" y="430" width="210" height="52" rx="2"/>
-  <text class="text" x="450" y="461">推进虚拟时间</text>
-
-  <line class="line" x1="450" y1="482" x2="450" y2="505"/>
-  <rect class="node" x="345" y="505" width="210" height="52" rx="2"/>
-  <text class="text" x="450" y="536">更新六种内在需求</text>
-
-  <line class="line" x1="450" y1="557" x2="450" y2="580"/>
-  <rect class="node" x="345" y="580" width="210" height="52" rx="2"/>
-  <text class="text" x="450" y="611">评估情绪与心境</text>
-
-  <line class="line" x1="450" y1="632" x2="450" y2="655"/>
-  <rect class="node" x="345" y="655" width="210" height="52" rx="2"/>
-  <text class="text" x="450" y="686">更新关系状态</text>
-
-  <rect class="node" x="120" y="492" width="168" height="55" rx="2"/>
-  <text class="small" x="204" y="516">
-    <tspan x="204" dy="0">需求变化</tspan>
-    <tspan x="204" dy="18">时间 / 事件强度</tspan>
-  </text>
-  <line class="line-soft" x1="288" y1="520" x2="345" y2="530"/>
-
-  <rect class="node" x="612" y="548" width="168" height="55" rx="2"/>
-  <text class="small" x="696" y="572">
-    <tspan x="696" dy="0">暂停 / 安静时间</tspan>
-    <tspan x="696" dy="18">未回复锁定</tspan>
-  </text>
-  <line class="line-soft" x1="555" y1="605" x2="612" y2="575"/>
-
-  <line class="line" x1="450" y1="707" x2="450" y2="742"/>
-  <rect class="node-strong" x="315" y="742" width="270" height="58" rx="2"/>
-  <text class="text" x="450" y="767">
-    <tspan x="450" dy="0">生成状态快照</tspan>
-    <tspan class="small" x="450" dy="20">人格 / 需求 / 情绪 / 关系</tspan>
-  </text>
-
-  <!-- 上下文构建 -->
-  <rect class="group" x="95" y="825" width="710" height="304" rx="1"/>
-  <text class="label" x="112" y="846">边界上下文</text>
-
-  <line class="line" x1="450" y1="800" x2="450" y2="868"/>
-  <rect class="node" x="113" y="868" width="150" height="52" rx="2"/>
-  <text class="small" x="188" y="892">
-    <tspan x="188" dy="0">稳定人格</tspan>
-    <tspan x="188" dy="18">名字 / 特质 / 价值</tspan>
-  </text>
-  <rect class="node" x="275" y="868" width="150" height="52" rx="2"/>
-  <text class="small" x="350" y="892">
-    <tspan x="350" dy="0">需求与情绪</tspan>
-    <tspan x="350" dy="18">紧迫度 / 心境</tspan>
-  </text>
-  <rect class="node" x="437" y="868" width="150" height="52" rx="2"/>
-  <text class="small" x="512" y="892">
-    <tspan x="512" dy="0">关系状态</tspan>
-    <tspan x="512" dy="18">熟悉度 / 信任</tspan>
-  </text>
-  <rect class="node" x="599" y="868" width="168" height="52" rx="2"/>
-  <text class="small" x="683" y="892">
-    <tspan x="683" dy="0">最近真实对话</tspan>
-    <tspan x="683" dy="18">重复度上下文</tspan>
-  </text>
-
-  <line class="line-soft" x1="188" y1="920" x2="350" y2="962"/>
-  <line class="line-soft" x1="350" y1="920" x2="390" y2="962"/>
-  <line class="line-soft" x1="512" y1="920" x2="460" y2="962"/>
-  <line class="line-soft" x1="683" y1="920" x2="510" y2="962"/>
-  <rect class="node-strong" x="310" y="962" width="280" height="60" rx="2"/>
-  <text class="text" x="450" y="988">
-    <tspan x="450" dy="0">LLM / Codex / Ollama</tspan>
-    <tspan class="small" x="450" dy="20">生成结构化候选</tspan>
-  </text>
-  <line class="line" x1="450" y1="1022" x2="450" y2="1080"/>
-  <rect class="node" x="335" y="1080" width="230" height="49" rx="2"/>
-  <text class="text" x="450" y="1110">回复 / 动作候选</text>
-
-  <!-- 候选评价与最终决策 -->
-  <rect class="group" x="95" y="1155" width="710" height="454" rx="1"/>
-  <text class="label" x="112" y="1176">候选评价与最终决策</text>
-
-  <line class="line" x1="450" y1="1129" x2="450" y2="1200"/>
-  <rect class="node" x="320" y="1200" width="260" height="55" rx="2"/>
-  <text class="text" x="450" y="1225">
-    <tspan x="450" dy="0">独立评价每个候选</tspan>
-    <tspan class="small" x="450" dy="18">重复度 / 最低打扰成本</tspan>
-  </text>
-
-  <line class="line" x1="385" y1="1255" x2="187" y2="1304"/>
-  <line class="line" x1="430" y1="1255" x2="345" y2="1304"/>
-  <line class="line" x1="470" y1="1255" x2="503" y2="1304"/>
-  <line class="line" x1="515" y1="1255" x2="661" y2="1304"/>
-
-  <rect class="node" x="112" y="1304" width="150" height="58" rx="2"/>
-  <text class="small" x="187" y="1329">
-    <tspan x="187" dy="0">需求缓解</tspan>
-    <tspan x="187" dy="18">是否真的有帮助</tspan>
-  </text>
-  <rect class="node" x="270" y="1304" width="150" height="58" rx="2"/>
-  <text class="small" x="345" y="1329">
-    <tspan x="345" dy="0">关系影响</tspan>
-    <tspan x="345" dy="18">是否造成压力</tspan>
-  </text>
-  <rect class="node" x="428" y="1304" width="150" height="58" rx="2"/>
-  <text class="small" x="503" y="1329">
-    <tspan x="503" dy="0">权限与边界</tspan>
-    <tspan x="503" dy="18">是否允许执行</tspan>
-  </text>
-  <rect class="node" x="586" y="1304" width="168" height="58" rx="2"/>
-  <text class="small" x="670" y="1329">
-    <tspan x="670" dy="0">与不行动比较</tspan>
-    <tspan x="670" dy="18">等待也是选择</tspan>
-  </text>
-
-  <line class="line-soft" x1="187" y1="1362" x2="370" y2="1409"/>
-  <line class="line-soft" x1="345" y1="1362" x2="410" y2="1409"/>
-  <line class="line-soft" x1="503" y1="1362" x2="490" y2="1409"/>
-  <line class="line-soft" x1="670" y1="1362" x2="530" y2="1409"/>
-  <rect class="node-strong" x="320" y="1409" width="260" height="55" rx="2"/>
-  <text class="text" x="450" y="1434">
-    <tspan x="450" dy="0">策略评分</tspan>
-    <tspan class="small" x="450" dy="18">需求缓解 + 关系价值 - 打扰成本</tspan>
-  </text>
-
-  <line class="line" x1="450" y1="1464" x2="450" y2="1493"/>
-  <polygon class="diamond" points="450,1493 520,1530 450,1567 380,1530"/>
-  <text class="small" x="450" y="1526">候选是否合适？</text>
-  <text class="edge-label" x="536" y="1517">否</text>
-  <text class="edge-label" x="466" y="1583">是</text>
-
-  <line class="line" x1="520" y1="1530" x2="676" y2="1530"/>
-  <rect class="node" x="676" y="1505" width="105" height="50" rx="2"/>
-  <text class="small" x="728" y="1534">淘汰并记录原因</text>
-
-  <!-- 执行、确认与反馈 -->
-  <rect class="group" x="95" y="1632" width="710" height="450" rx="1"/>
-  <text class="label" x="112" y="1653">执行与反馈</text>
-
-  <line class="line" x1="450" y1="1567" x2="450" y2="1680"/>
-  <rect class="node" x="112" y="1680" width="150" height="55" rx="2"/>
-  <text class="small" x="187" y="1713">回复消息</text>
-  <rect class="node" x="270" y="1680" width="150" height="55" rx="2"/>
-  <text class="small" x="345" y="1713">内部记录</text>
-  <rect class="node" x="428" y="1680" width="150" height="55" rx="2"/>
-  <text class="small" x="503" y="1704">
-    <tspan x="503" dy="0">等待 / 不行动</tspan>
-    <tspan x="503" dy="18">保留当前状态</tspan>
-  </text>
-  <rect class="node" x="586" y="1680" width="168" height="55" rx="2"/>
-  <text class="small" x="670" y="1704">
-    <tspan x="670" dy="0">主动联系</tspan>
-    <tspan x="670" dy="18">仅在允许时发送</tspan>
-  </text>
-
-  <line class="line-soft" x1="187" y1="1735" x2="392" y2="1778"/>
-  <line class="line-soft" x1="345" y1="1735" x2="425" y2="1778"/>
-  <line class="line-soft" x1="503" y1="1735" x2="475" y2="1778"/>
-  <line class="line-soft" x1="670" y1="1735" x2="515" y2="1778"/>
-  <rect class="node-strong" x="325" y="1778" width="250" height="55" rx="2"/>
-  <text class="text" x="450" y="1812">保存行动与执行确认</text>
-
-  <line class="line" x1="450" y1="1833" x2="450" y2="1866"/>
-  <polygon class="diamond" points="450,1866 520,1903 450,1940 380,1903"/>
-  <text class="small" x="450" y="1899">执行是否成功？</text>
-  <text class="edge-label" x="370" y="1890">否</text>
-  <text class="edge-label" x="466" y="1956">是</text>
-
-  <line class="line" x1="380" y1="1903" x2="205" y2="1980"/>
-  <rect class="node" x="120" y="1980" width="170" height="52" rx="2"/>
-  <text class="small" x="205" y="2004">
-    <tspan x="205" dy="0">记录失败原因</tspan>
-    <tspan x="205" dy="18">不改变关系状态</tspan>
-  </text>
-
-  <line class="line" x1="450" y1="1940" x2="450" y2="1980"/>
-  <rect class="node" x="345" y="1980" width="210" height="52" rx="2"/>
-  <text class="small" x="450" y="2004">
-    <tspan x="450" dy="0">写入结果事件</tspan>
-    <tspan x="450" dy="18">回复 / 记录 / 等待</tspan>
-  </text>
-
-  <line class="line" x1="450" y1="2032" x2="450" y2="2064"/>
-  <rect class="node-strong" x="315" y="2064" width="270" height="58" rx="2"/>
-  <text class="text" x="450" y="2089">
-    <tspan x="450" dy="0">更新需求、关系与近期对话</tspan>
-    <tspan class="small" x="450" dy="20">下一轮从新的状态继续</tspan>
-  </text>
-
-  <!-- 失败分支最终回到状态快照；右侧虚线表示持续运行的时间循环 -->
-  <path class="line-soft" d="M205,2032 C205,2110 258,2136 315,2136"/>
-  <path class="loop" d="M585,2093 C730,2093 822,2045 822,1830 L822,460 C822,420 790,400 754,400"/>
-  <text class="edge-label" x="812" y="1265" transform="rotate(-90 812 1265)">持续运行 / 时间推进</text>
+  <rect class="g" x="80" y="1762" width="740" height="486"/><text class="gl" x="98" y="1783">Outbox、通道与可信反馈</text>
+  <path class="l" d="M450 1686V1812"/><rect class="s" x="300" y="1812" width="300" height="62"/><text class="t" x="450" y="1838"><tspan x="450">写入持久 Outbox</tspan><tspan class="sm" x="450" dy="21">rendered · queued · action_id</tspan></text>
+  <path class="l" d="M450 1874V1915"/><rect class="n" x="326" y="1915" width="248" height="58"/><text class="t" x="450" y="1940"><tspan x="450">消息通道执行</tspan><tspan class="sm" x="450" dy="20">按 action_id 回报结果</tspan></text>
+  <path class="l" d="M450 1973V2008"/><polygon class="d" points="450,2008 520,2046 450,2084 380,2046"/><text class="sm" x="450" y="2042">真实送达？</text><text class="e" x="354" y="2032">失败/取消</text><text class="e" x="468" y="2100">成功</text>
+  <path class="l" d="M380 2046L220 2112"/><rect class="n" x="105" y="2112" width="230" height="58"/><text class="sm" x="220" y="2137"><tspan x="220">Outbox 标记失败或取消</tspan><tspan x="220" dy="19">不改变关系状态</tspan></text>
+  <path class="l" d="M450 2084V2112"/><rect class="s" x="345" y="2112" width="210" height="58"/><text class="sm" x="450" y="2137"><tspan x="450">原子写入结果事件</tspan><tspan x="450" dy="19">伪造 ID 被拒绝</tspan></text>
+  <path class="l" d="M450 2170V2202"/><rect class="s" x="292" y="2202" width="316" height="64"/><text class="t" x="450" y="2228"><tspan x="450">更新需求、负荷、关系与对话</tspan><tspan class="sm" x="450" dy="21">确认结果形成下一轮人格状态</tspan></text>
+  <path class="loop" d="M608 2234C760 2234 834 2160 834 1910V478C834 430 800 408 766 408"/><text class="e" x="824" y="1300" transform="rotate(-90 824 1300)">后台持续运行 / 时间推进 / 冷却后再评估</text>
+  <path class="ls" d="M220 2170C220 2290 292 2312 360 2312"/>
 </svg>
