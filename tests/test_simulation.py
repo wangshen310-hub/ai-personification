@@ -15,6 +15,9 @@ def test_no_reply_scenario_can_reconsider_after_cooldown_without_spam(tmp_path) 
     )
     assert 1 < report.proactive_messages <= 10
     assert report.boundary_violations == 0
+    assert report.max_proactive_24h <= 2
+    assert report.pending_actions == 0
+    assert report.invariant_findings == ()
 
 
 def test_daily_reply_scenario_respects_configured_cadence(tmp_path) -> None:
@@ -24,6 +27,9 @@ def test_daily_reply_scenario_respects_configured_cadence(tmp_path) -> None:
     )
     assert report.proactive_messages <= 360
     assert report.boundary_violations == 0
+    assert report.max_proactive_24h <= 2
+    assert report.pending_actions == 0
+    assert report.invariant_findings == ()
     assert report.min_drive_value >= 0.0
     assert report.max_drive_value <= 1.0
 

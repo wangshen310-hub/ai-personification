@@ -57,12 +57,15 @@ class PolicyContext:
     awaiting_reply: bool
     proactive_cycle: bool
     proactive_sent_at: tuple[datetime, ...]
+    proactive_reserved_at: tuple[datetime, ...] = ()
 
     def __post_init__(self) -> None:
         if self.now.tzinfo is None:
             raise ValueError("policy time must be timezone-aware")
         if any(item.tzinfo is None for item in self.proactive_sent_at):
             raise ValueError("sent timestamps must be timezone-aware")
+        if any(item.tzinfo is None for item in self.proactive_reserved_at):
+            raise ValueError("reserved timestamps must be timezone-aware")
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,11 +149,12 @@ class PolicyEngine:
                         reasons.append("unanswered_cooldown")
                 cutoff = context.now - timedelta(hours=24)
                 recent = sum(at > cutoff for at in context.proactive_sent_at)
+                reserved = sum(at > cutoff for at in context.proactive_reserved_at)
                 limit = min(
                     context.user.proactive_limit_per_24h,
                     self._system.proactive_limit_per_24h,
                 )
-                if recent >= limit:
+                if recent + reserved >= limit:
                     reasons.append("rate_limit")
         return tuple(dict.fromkeys(reasons))
 

@@ -70,6 +70,7 @@ class ModelContext:
     memory: tuple[str, ...] = ()
     intent_guidance: tuple[str, ...] = ()
     max_output_chars: int = 6_000
+    memory_write_allowed: bool = False
 
     def __post_init__(self) -> None:
         if any(not isfinite(value) or not 0.0 <= value <= 1.0 for _, value in self.urgencies):
@@ -112,6 +113,7 @@ class ModelContext:
             "allowed_actions": [item.value for item in self.allowed_actions],
             "persona": list(self.persona),
             "allowed_tools": list(self.allowed_tools),
+            "memory_write_allowed": self.memory_write_allowed,
             "memory": [item[:2_000] for item in self.memory[:8]],
             "intent_guidance": [item[:500] for item in self.intent_guidance[:8]],
         }
@@ -224,6 +226,7 @@ Express the stable persona and relationship context consistently without inventi
 Return only the requested JSON object. Propose one or more possible replies or internal actions.
 Never claim that a proposal is safe; safety is assessed outside the model.
 Do not invent tools. Request only tools listed in allowed_tools, and do not assume a tool call ran.
+Only request a memory.write tool when memory_write_allowed is true; internal notes are not memory writes.
 The runtime, not you, decides whether any proposal is executed.
 Use intent_guidance to render only the motivations already created by the runtime.
 Numeric benefit fields are compatibility placeholders and are ignored by the runtime.

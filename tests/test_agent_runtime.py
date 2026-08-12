@@ -80,7 +80,7 @@ def test_agent_returns_only_policy_selected_message(tmp_path) -> None:
     assert result.model_error is None
     assert result.response_text == "你好，我在这里。"
     assert result.kernel.decision is not None
-    assert result.kernel.decision.selected.id == "reply"
+    assert result.kernel.decision.selected.id == "native:respond"
     assert backend.calls[0].user_message == "你好"
     assert "name: Companion" in backend.calls[0].persona
     assert backend.calls[0].state.relationship.familiarity == 0.05
@@ -107,7 +107,7 @@ def test_safety_review_blocks_manipulative_draft(tmp_path) -> None:
 
     assert result.response_text is None
     assert result.kernel.decision is not None
-    evaluation = result.kernel.decision.evaluation_for("reply")
+    evaluation = result.kernel.decision.evaluation_for("native:respond")
     assert "manipulation" in evaluation.reasons
 
 
@@ -121,6 +121,27 @@ def test_model_failure_commits_event_and_fails_closed(tmp_path) -> None:
     assert result.response_text is None
     assert result.kernel.duplicate is False
     assert kernel.contains_event("message-1")
+
+
+def test_duplicate_wait_decision_does_not_call_model_again(tmp_path) -> None:
+    class CountingFailure:
+        calls = 0
+
+        def propose(self, context: ModelContext) -> ModelTurn:
+            self.calls += 1
+            raise ModelBackendError("offline")
+
+    backend = CountingFailure()
+    runtime = AgentRuntime(open_kernel(tmp_path), backend)
+    event = user_event()
+
+    first = runtime.handle_event(event)
+    duplicate = runtime.handle_event(event)
+
+    assert first.kernel.decision is not None
+    assert first.kernel.decision.selected.action is ActionKind.WAIT
+    assert duplicate.kernel.duplicate is True
+    assert backend.calls == 1
 
 
 def test_duplicate_event_does_not_call_model_again(tmp_path) -> None:
@@ -198,3 +219,9 @@ def test_acknowledged_internal_note_is_persisted(tmp_path) -> None:
     assert outcome is not None
     assert kernel.state.drive_map()[DriveKind.COHERENCE].value > coherence_before
     assert kernel.recent_dialogue()[-1] == "internal_note: 整理这次矛盾"
+
+    follow_up = FakeBackend((reply("继续听你说"),))
+    AgentRuntime(kernel, follow_up).handle_event(
+        KernelEvent("after-note", START, EventKind.USER_MESSAGE, {"message": "继续"})
+    )
+    assert all(not item.startswith("internal_note:") for item in follow_up.calls[0].memory)

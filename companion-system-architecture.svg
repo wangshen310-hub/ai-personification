@@ -25,10 +25,10 @@
     <text x="354" y="150" class="section">02  PERSISTENCE</text>
     <rect x="354" y="174" width="260" height="282" rx="14" class="persist"/>
     <text x="382" y="214" class="heading">SQLite WAL</text><line x1="382" y1="230" x2="586" y2="230" stroke="#d8d2eb"/>
-    <text x="382" y="266" class="body">唯一事件 ID 与事务</text>
+    <text x="382" y="266" class="body">唯一 ID · 序列 CAS · 事务</text>
     <text x="382" y="306" class="body">人格与用户配置</text>
     <text x="382" y="346" class="body">证据记忆与学习参数</text>
-    <text x="382" y="386" class="body">决策审计与 Outbox</text>
+    <text x="382" y="386" class="body">决策审计与原子 Outbox</text>
     <text x="382" y="426" class="small">旧 JSONL 首次打开自动导入</text>
 
     <text x="654" y="150" class="section">03  MODEL-EXTERNAL KERNEL</text>
@@ -45,20 +45,20 @@
 
     <rect x="684" y="394" width="460" height="92" rx="10" class="box"/>
     <text x="706" y="428" class="heading">原生动力与意图生成</text>
-    <text x="706" y="455" class="body">回应 · 主动联系 · 内部整理 · 等待</text>
+    <text x="706" y="455" class="body">回应 · 主动联系 · 内部整理 · 等待（先选意图）</text>
     <path d="M1037 366V394" class="flow"/>
 
     <rect x="684" y="514" width="460" height="124" rx="10" class="box"/>
     <text x="706" y="548" class="heading">策略仲裁</text>
     <text x="706" y="576" class="body">需求缓解 · 关系 · 互动负荷 · 打扰与重复</text>
-    <text x="706" y="603" class="small">安静时间 · 可配置 24h 节奏 · 未回复 72h 冷却再评估</text>
+    <text x="706" y="603" class="small">安静时间 · 待发送计入 24h 容量 · 未回复 72h 冷却再评估</text>
     <path d="M914 486V514" class="flow"/>
 
     <text x="1214" y="150" class="section">04  LANGUAGE MODEL</text>
     <rect x="1214" y="174" width="230" height="282" rx="14" class="model"/>
     <text x="1242" y="214" class="heading">表达实现器</text><line x1="1242" y1="230" x2="1416" y2="230" stroke="#cfe0df"/>
     <text x="1242" y="268" class="body">Ollama</text><text x="1242" y="304" class="body">OpenAI Responses</text><text x="1242" y="340" class="body">Codex CLI</text>
-    <text x="1242" y="384" class="small">接收已授权意图</text><text x="1242" y="408" class="small">只生成文字草稿</text><text x="1242" y="432" class="small">自评分不会改变收益</text>
+    <text x="1242" y="384" class="small">只接收当前选中意图</text><text x="1242" y="408" class="small">只生成文字草稿</text><text x="1242" y="432" class="small">自评分不会改变收益</text>
 
     <path d="M1144 438H1184V278H1214" class="model-flow"/><text x="1180" y="262" text-anchor="middle" class="label">意图指导</text>
     <path d="M1214 400H1184V568H1144" class="model-flow"/><text x="1180" y="590" text-anchor="middle" class="label">表达草稿</text>
@@ -67,8 +67,8 @@
     <text x="354" y="724" class="section">05  ACTION DELIVERY</text>
     <rect x="354" y="748" width="820" height="116" rx="14" class="persist"/>
     <text x="382" y="785" class="heading">持久 Outbox</text>
-    <text x="382" y="816" class="body">rendered → queued → delivered / failed / cancelled</text>
-    <text x="382" y="842" class="small">暂停会取消待执行动作；伪造 action_id 无法改变人格</text>
+    <text x="382" y="816" class="body">rendered → queued → sending → delivered / failed / cancelled</text>
+    <text x="382" y="842" class="small">领取带租约，待发送计入容量；确认反馈需求与关系</text>
     <rect x="927" y="772" width="217" height="66" rx="10" class="box"/>
     <text x="1035" y="800" text-anchor="middle" class="heading">消息通道</text><text x="1035" y="824" text-anchor="middle" class="small">按 action_id 确认送达</text>
     <path d="M914 674V748" class="flow"/>

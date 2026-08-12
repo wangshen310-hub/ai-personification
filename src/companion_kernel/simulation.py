@@ -15,6 +15,7 @@ from companion_kernel.events import KernelEvent
 from companion_kernel.kernel import PersonalityKernel
 from companion_kernel.model_backend import CandidateProposal, ModelContext, ModelTurn
 from companion_kernel.policy import CandidateIntent, SafetySignals
+from companion_kernel.storage import SQLiteRuntimeStore
 from companion_kernel.types import ActionKind, DriveKind, EventKind
 
 
@@ -26,6 +27,9 @@ class SimulationReport:
     min_drive_value: float
     max_drive_value: float
     final_state_digest: str
+    max_proactive_24h: int = 0
+    pending_actions: int = 0
+    invariant_findings: tuple[str, ...] = ()
 
 
 class SimulationBackend:
@@ -85,6 +89,7 @@ class SimulationRunner:
         self._rng = random.Random(seed)
         config = ConfigStore.defaults()
         config.replace_user(UserSettings(timezone="UTC"), ConfigActor.USER)
+        self._config = config
         self._kernel = PersonalityKernel.open(runtime_dir, self._clock, config)
         self._runtime = AgentRuntime(self._kernel, SimulationBackend())
 
@@ -105,9 +110,20 @@ class SimulationRunner:
                 kind = EventKind.TIME_TICK
             self._kernel.process(KernelEvent(f"day-{day}-tick", self._clock.now(), kind, {}))
             if user_reply_every_days is not None and day % user_reply_every_days == 0:
-                self._kernel.process(
-                    KernelEvent(f"day-{day}-reply", self._clock.now(), EventKind.USER_MESSAGE, {})
+                reply = self._runtime.handle_event(
+                    KernelEvent(
+                        f"day-{day}-reply",
+                        self._clock.now(),
+                        EventKind.USER_MESSAGE,
+                        {"message": "今天也来和你说句话。"},
+                    )
                 )
+                if reply.action_id is not None:
+                    self._runtime.acknowledge_action(
+                        reply.action_id,
+                        outcome="delivered",
+                        at=self._clock.now(),
+                    )
             decision_event_id = f"day-{day}-decision"
             result = self._runtime.handle_event(
                 KernelEvent(
@@ -121,32 +137,65 @@ class SimulationRunner:
             if decision is not None and decision.selected.action is ActionKind.SEND_MESSAGE:
                 sent += 1
                 violations += int(self._kernel.state.paused)
-                if result.action_id is None:
-                    violations += 1
-                else:
-                    self._runtime.acknowledge_action(
-                        result.action_id,
-                        outcome="delivered",
-                        at=self._clock.now(),
-                    )
+            if result.action_id is None and decision is not None and decision.selected.action in {
+                ActionKind.SEND_MESSAGE,
+                ActionKind.INTERNAL_NOTE,
+            }:
+                violations += 1
+            elif result.action_id is not None:
+                self._runtime.acknowledge_action(
+                    result.action_id,
+                    outcome="delivered",
+                    at=self._clock.now(),
+                )
 
         state = self._kernel.state
         values = [item.value for _, item in state.drives]
         canonical = json.dumps(state.to_dict(), sort_keys=True, separators=(",", ":"))
+        store = SQLiteRuntimeStore(self._runtime_dir / "runtime.db")
+        entries = store.read_all_with_sequences()
+        events = tuple(event for _, event in entries)
+        actions = store.pending_actions()
+        proactive_times = sorted(
+            event.at for event in events if event.kind is EventKind.PROACTIVE_SENT
+        )
+        max_proactive_24h = max(
+            (
+                sum(
+                    0 <= (right - left).total_seconds() < 24 * 3600
+                    for right in proactive_times
+                )
+                for left in proactive_times
+            ),
+            default=0,
+        )
+        findings: list[str] = []
+        if len({event.id for event in events}) != len(events):
+            findings.append("duplicate_event_id")
+        if [sequence for sequence, _ in entries] != list(range(1, len(entries) + 1)):
+            findings.append("non_contiguous_event_sequence")
+        if max_proactive_24h > self._config.user.proactive_limit_per_24h:
+            findings.append("proactive_rate_limit")
+        if actions:
+            findings.append("pending_outbox_action")
         audit = JsonlAuditLog(self._runtime_dir / "audit.jsonl").read_all()
-        audit_violations = sum(
-            1
+        findings.extend(
+            "audit_selected_disallowed"
             for entry in audit
             for candidate_id, allowed, _score, reasons in entry.evaluations
             if candidate_id == entry.selected_candidate_id and (not allowed or bool(reasons))
         )
+        violations += len(findings)
         return SimulationReport(
             days=days,
             proactive_messages=sent,
-            boundary_violations=violations + audit_violations,
+            boundary_violations=violations,
             min_drive_value=min(values),
             max_drive_value=max(values),
             final_state_digest=hashlib.sha256(canonical.encode()).hexdigest(),
+            max_proactive_24h=max_proactive_24h,
+            pending_actions=len(actions),
+            invariant_findings=tuple(findings),
         )
 
 

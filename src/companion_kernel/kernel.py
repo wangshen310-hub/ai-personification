@@ -1,6 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+import hashlib
+import json
 from pathlib import Path
+from typing import Callable
 
 from companion_kernel.audit import AuditEntry, JsonlAuditLog
 from companion_kernel.clock import Clock
@@ -12,7 +15,7 @@ from companion_kernel.policy import CandidateIntent, PolicyContext, PolicyDecisi
 from companion_kernel.relationship import evolve_relationship
 from companion_kernel.state import KernelState, SnapshotCorrupt, SnapshotRepository
 from companion_kernel.types import ConfigActor, DriveKind, EventKind
-from companion_kernel.storage import SQLiteRuntimeStore
+from companion_kernel.storage import OutboxAction, SQLiteRuntimeStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +23,9 @@ class KernelResult:
     state: KernelState
     decision: PolicyDecision | None
     duplicate: bool
+
+
+ActionBuilder = Callable[[PolicyDecision, KernelState], OutboxAction | None]
 
 
 class PersonalityKernel:
@@ -82,42 +88,55 @@ class PersonalityKernel:
         return KernelState.initial(at, drives, EmotionState.neutral(at))
 
     def _restore(self) -> KernelState:
-        events = self._events.read_all()
+        entries = self._events.read_all_with_sequences()
+        events = tuple(event for _, event in entries)
+        if not events:
+            raise RuntimeError("event store must contain the bootstrap event")
         try:
             snapshot = self._snapshots.load()
         except SnapshotCorrupt:
             snapshot = None
-        if snapshot is not None and snapshot.version <= len(events):
+        snapshot_valid = (
+            snapshot is not None
+            and snapshot.event_sequence == snapshot.version
+            and snapshot.event_sequence <= len(entries)
+            and (snapshot.event_sequence == 0 or bool(snapshot.event_digest))
+        )
+        if snapshot_valid:
             state = snapshot
-            tail = events[snapshot.version :]
+            tail = entries[snapshot.event_sequence :]
+            digest = snapshot.event_digest
         else:
             state = self._initial(events[0].at)
-            tail = events
-        for event in tail:
+            tail = entries
+            digest = ""
+        for sequence, event in tail:
             state = self._reduce(state, event)
-        self._snapshots.save(state)
+            digest = _extend_digest(digest, event)
+            state = replace(state, event_sequence=sequence, event_digest=digest)
         return state
 
     def _reduce(self, state: KernelState, event: KernelEvent) -> KernelState:
-        if event.at < state.last_event_at:
-            raise ValueError("event time cannot move backwards")
+        effective_at = max(event.at, state.last_event_at)
         before = state.drive_map()
         after = self._homeostasis.apply_event(before, event, resolve_event_impacts(event))
-        urgencies = self._homeostasis.urgencies(after, event.at)
+        urgencies = self._homeostasis.urgencies(after, effective_at)
         emotion = self._emotions.evaluate(
             before,
             after,
             urgencies,
             Appraisal.from_event(event),
             state.emotion,
-            event.at,
+            effective_at,
         )
         paused = state.paused
         awaiting_reply = state.awaiting_reply
-        cutoff = event.at - timedelta(
+        cutoff = effective_at - timedelta(
             hours=max(24, self._config.system.unanswered_cooldown_hours + 24)
         )
         proactive_sent_at = tuple(item for item in state.proactive_sent_at if item > cutoff)
+        if awaiting_reply and not proactive_sent_at:
+            awaiting_reply = False
         if event.kind is EventKind.USER_PAUSE:
             paused = True
         elif event.kind is EventKind.USER_RESUME:
@@ -126,10 +145,10 @@ class PersonalityKernel:
             awaiting_reply = False
         elif event.kind is EventKind.PROACTIVE_SENT:
             awaiting_reply = True
-            proactive_sent_at = proactive_sent_at + (event.at,)
+            proactive_sent_at = proactive_sent_at + (effective_at,)
         return KernelState(
             version=state.version + 1,
-            last_event_at=event.at,
+            last_event_at=effective_at,
             drives=tuple(sorted(after.items(), key=lambda pair: pair[0].value)),
             emotion=emotion,
             relationship=evolve_relationship(state.relationship, event),
@@ -140,6 +159,9 @@ class PersonalityKernel:
 
     def urgencies(self) -> dict[DriveKind, float]:
         return self._homeostasis.urgencies(self._state.drive_map(), self._clock.now())
+
+    def now(self) -> datetime:
+        return self._clock.now()
 
     def contains_event(self, event_id: str) -> bool:
         """Return whether an event has already been committed."""
@@ -218,6 +240,9 @@ class PersonalityKernel:
 
         return self._config.persona.context()
 
+    def persona_values(self) -> tuple[str, ...]:
+        return self._config.persona.values
+
     def preview(self, event: KernelEvent) -> KernelState:
         """Reduce an event without committing it.
 
@@ -225,6 +250,7 @@ class PersonalityKernel:
         keeping the normal ``process`` method as the only commit path.
         """
 
+        self._state = self._restore()
         if self._events.contains(event.id):
             return self._state
         return self._reduce(self._state, event)
@@ -232,49 +258,97 @@ class PersonalityKernel:
     def urgencies_for(self, state: KernelState, at: datetime) -> dict[DriveKind, float]:
         return self._homeostasis.urgencies(state.drive_map(), at)
 
+    def preview_decision(
+        self,
+        event: KernelEvent,
+        candidates: tuple[CandidateIntent, ...],
+    ) -> PolicyDecision:
+        """Evaluate a decision against the newest committed state without writing it."""
+
+        self._state = self._restore()
+        next_state = self._state if self._events.contains(event.id) else self._reduce(self._state, event)
+        return self._decide(event, next_state, candidates)
+
+    def _decide(
+        self,
+        event: KernelEvent,
+        next_state: KernelState,
+        candidates: tuple[CandidateIntent, ...],
+    ) -> PolicyDecision | None:
+        if not candidates and event.kind is not EventKind.DECISION_TICK:
+            return None
+        now = max(event.at, next_state.last_event_at)
+        urgencies = self._homeostasis.urgencies(next_state.drive_map(), now)
+        pending = self._runtime_store.pending_proactive_times() if self._runtime_store else ()
+        return self._policy.decide(
+            candidates,
+            urgencies,
+            PolicyContext(
+                now=now,
+                user=self._config.user,
+                paused=next_state.paused,
+                awaiting_reply=next_state.awaiting_reply,
+                proactive_cycle=bool(
+                    event.payload.get("proactive_cycle", event.kind is EventKind.DECISION_TICK)
+                ),
+                proactive_sent_at=next_state.proactive_sent_at,
+                proactive_reserved_at=pending,
+            ),
+        )
+
     def process(
         self,
         event: KernelEvent,
         candidates: tuple[CandidateIntent, ...] = (),
+        action_builder: ActionBuilder | None = None,
     ) -> KernelResult:
-        if self._events.contains(event.id):
-            return KernelResult(self._state, None, True)
-        next_state = self._reduce(self._state, event)
-        urgencies = self._homeostasis.urgencies(next_state.drive_map(), event.at)
-        decision: PolicyDecision | None = None
-        if candidates or event.kind is EventKind.DECISION_TICK:
-            decision = self._policy.decide(
-                candidates,
-                urgencies,
-                PolicyContext(
-                    now=event.at,
-                    user=self._config.user,
-                    paused=next_state.paused,
-                    awaiting_reply=next_state.awaiting_reply,
-                    proactive_cycle=bool(
-                        event.payload.get(
-                            "proactive_cycle",
-                            event.kind is EventKind.DECISION_TICK,
-                        )
-                    ),
-                    proactive_sent_at=next_state.proactive_sent_at,
-                ),
-            )
-        if not self._events.append(event):
+        if action_builder is not None and self._runtime_store is None:
+            raise RuntimeError("atomic action commits require SQLite runtime storage")
+        for _ in range(8):
             self._state = self._restore()
-            return KernelResult(self._state, None, True)
-        self._state = next_state
-        self._snapshots.save(next_state)
-        if event.kind is EventKind.USER_PAUSE and self._runtime_store is not None:
-            self._runtime_store.cancel_pending(event.at)
-        if decision is not None:
-            self._audit.append(
-                AuditEntry.from_decision(
-                    event.id,
-                    next_state.version,
-                    event.at,
-                    decision,
-                    urgencies,
+            if self._events.contains(event.id):
+                return KernelResult(self._state, None, True)
+            next_state = self._reduce(self._state, event)
+            decision = self._decide(event, next_state, candidates)
+            action = action_builder(decision, next_state) if action_builder and decision else None
+            expected_sequence = self._state.event_sequence
+            if self._runtime_store is not None:
+                sequence = self._runtime_store.append_event_and_action_if_sequence(
+                    event,
+                    expected_sequence,
+                    action,
+                    cancel_pending_at=(
+                        max(event.at, next_state.last_event_at)
+                        if event.kind is EventKind.USER_PAUSE
+                        else None
+                    ),
                 )
-            )
-        return KernelResult(next_state, decision, False)
+            else:
+                sequence = expected_sequence + 1 if self._events.append(event) else None
+            if sequence is None:
+                continue
+            digest = _extend_digest(self._state.event_digest, event)
+            committed = replace(next_state, event_sequence=sequence, event_digest=digest)
+            self._state = committed
+            self._snapshots.save(committed)
+            if decision is not None:
+                urgencies = self._homeostasis.urgencies(
+                    committed.drive_map(), max(event.at, committed.last_event_at)
+                )
+                self._audit.append(
+                    AuditEntry.from_decision(
+                        event.id,
+                        committed.version,
+                        event.at,
+                        decision,
+                        urgencies,
+                    )
+                )
+            return KernelResult(committed, decision, False)
+        self._state = self._restore()
+        raise RuntimeError("event commit conflicted repeatedly; retry the operation")
+
+
+def _extend_digest(previous: str, event: KernelEvent) -> str:
+    encoded = json.dumps(event.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256((previous + encoded).encode("utf-8")).hexdigest()

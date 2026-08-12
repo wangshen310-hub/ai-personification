@@ -71,12 +71,21 @@ EVENT_IMPACTS: dict[EventKind, dict[DriveKind, float]] = {
     EventKind.BOUNDARY_RESPECTED: {DriveKind.AUTONOMY: 0.10},
     EventKind.CONTRADICTION: {DriveKind.COHERENCE: -0.20},
     EventKind.DECISION_TICK: {},
-    EventKind.ASSISTANT_MESSAGE_SENT: {DriveKind.RHYTHM: 0.08},
+    EventKind.ASSISTANT_MESSAGE_SENT: {
+        DriveKind.CONNECTION: 0.06,
+        DriveKind.CURIOSITY: 0.02,
+        DriveKind.RHYTHM: 0.08,
+    },
     EventKind.INTERNAL_NOTE_CREATED: {
         DriveKind.COHERENCE: 0.08,
         DriveKind.RHYTHM: 0.03,
     },
-    EventKind.PROACTIVE_SENT: {DriveKind.RHYTHM: 0.12},
+    EventKind.PROACTIVE_SENT: {
+        DriveKind.CONNECTION: 0.08,
+        DriveKind.CARE: 0.04,
+        DriveKind.CURIOSITY: 0.02,
+        DriveKind.RHYTHM: 0.12,
+    },
     EventKind.USER_APPRECIATION: {DriveKind.CONNECTION: 0.08, DriveKind.CARE: 0.04},
     EventKind.USER_BOUNDARY_SET: {DriveKind.AUTONOMY: 0.12},
     EventKind.USER_REJECTION: {DriveKind.AUTONOMY: 0.06},
@@ -170,14 +179,20 @@ class HomeostasisEngine:
     ) -> dict[DriveKind, DriveState]:
         if any(event.id in state.evidence for state in states.values()):
             return dict(states)
-        result = self.advance(states, event.at)
+        latest = max((item.last_updated_at for item in states.values()), default=event.at)
+        effective_at = max(event.at, latest)
+        result = self.advance(states, effective_at)
         for kind, delta in impacts.items():
             if not isfinite(delta):
                 raise ValueError("drive impact must be finite")
             state = result[kind]
             value = min(1.0, max(0.0, state.value + delta))
             config = self._configs[kind]
-            unmet = None if config.target_low <= value <= config.target_high else state.unmet_since or event.at
+            unmet = (
+                None
+                if config.target_low <= value <= config.target_high
+                else state.unmet_since or effective_at
+            )
             result[kind] = replace(
                 state,
                 value=value,

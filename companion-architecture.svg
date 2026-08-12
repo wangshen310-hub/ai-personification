@@ -77,10 +77,10 @@
     <text x="1220" y="364" class="body">理解当前处境</text>
     <text x="1220" y="404" class="body">预测用户可能的感受</text>
     <text x="1220" y="444" class="body">想象多种未来</text>
-    <text x="1220" y="484" class="body">生成候选意图与表达</text>
+    <text x="1220" y="484" class="body">只为已选意图生成表达</text>
     <line x1="1220" y1="520" x2="1470" y2="520" stroke="#3f5a70"/>
-    <text x="1345" y="552" text-anchor="middle" class="small" fill="#91dbff">只能回应需求</text>
-    <text x="1345" y="577" text-anchor="middle" class="small" fill="#91dbff">不能直接篡改需求</text>
+    <text x="1345" y="552" text-anchor="middle" class="small" fill="#91dbff">只能实现内核意图</text>
+    <text x="1345" y="577" text-anchor="middle" class="small" fill="#91dbff">不能创造行动理由</text>
 
     <!-- Arrows top -->
     <path d="M400 353 L465 353" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
@@ -115,7 +115,7 @@
     <circle cx="1040" cy="952" r="17" fill="#fbbf24"/>
     <text x="1040" y="959" text-anchor="middle" class="number">6</text>
     <text x="1072" y="961" class="box-title">对话与反馈</text>
-    <text x="1040" y="996" class="body">表达行动，观察反应，写回状态与记忆</text>
+    <text x="1040" y="996" class="body">Outbox + action_id 确认，反馈状态与记忆</text>
 
     <path d="M1038 852 L1038 882 L580 882 L580 904" fill="none" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>
     <path d="M890 968 L987 968" stroke="#8291aa" stroke-width="4" marker-end="url(#arrow)"/>

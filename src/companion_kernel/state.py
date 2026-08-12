@@ -27,6 +27,8 @@ class KernelState:
     paused: bool
     awaiting_reply: bool
     proactive_sent_at: tuple[datetime, ...]
+    event_sequence: int = 0
+    event_digest: str = ""
 
     @classmethod
     def initial(
@@ -36,7 +38,7 @@ class KernelState:
         emotion: EmotionState,
     ) -> "KernelState":
         ordered = tuple(sorted(drives.items(), key=lambda pair: pair[0].value))
-        return cls(0, at, ordered, emotion, RelationshipState.initial(), False, False, ())
+        return cls(0, at, ordered, emotion, RelationshipState.initial(), False, False, (), 0, "")
 
     def drive_map(self) -> dict[DriveKind, DriveState]:
         return dict(self.drives)
@@ -67,6 +69,8 @@ class KernelState:
             "paused": self.paused,
             "awaiting_reply": self.awaiting_reply,
             "proactive_sent_at": [item.isoformat() for item in self.proactive_sent_at],
+            "event_sequence": self.event_sequence,
+            "event_digest": self.event_digest,
         }
 
     @classmethod
@@ -102,6 +106,8 @@ class KernelState:
             paused=bool(raw["paused"]),
             awaiting_reply=bool(raw["awaiting_reply"]),
             proactive_sent_at=tuple(datetime.fromisoformat(item) for item in raw["proactive_sent_at"]),
+            event_sequence=int(raw.get("event_sequence", 0)),
+            event_digest=str(raw.get("event_digest", "")),
         )
 
 

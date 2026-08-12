@@ -5,7 +5,7 @@
   <rect class="bg" width="900" height="2360"/>
 
   <rect class="s" x="300" y="45" width="300" height="66"/><text class="t" x="450" y="71"><tspan x="450">外部事件 / 后台 Worker</tspan><tspan class="sm" x="450" dy="22">用户消息 · 时间 · 暂停 · 通道反馈</tspan></text>
-  <path class="l" d="M450 111V150"/><rect class="n" x="330" y="150" width="240" height="58"/><text class="t" x="450" y="175"><tspan x="450">SQLite WAL 事件事务</tspan><tspan class="sm" x="450" dy="20">唯一 event_id · 并发安全</tspan></text>
+  <path class="l" d="M450 111V150"/><rect class="n" x="330" y="150" width="240" height="58"/><text class="t" x="450" y="175"><tspan x="450">SQLite WAL 事件事务</tspan><tspan class="sm" x="450" dy="20">event_id · 序列 CAS · 并发安全</tspan></text>
   <path class="l" d="M450 208V244"/><polygon class="d" points="450,244 522,282 450,320 378,282"/><text class="sm" x="450" y="278">事件是否已存在？</text><text class="e" x="350" y="270">是</text><text class="e" x="470" y="337">否</text>
   <path class="l" d="M378 282L246 334"/><rect class="n" x="76" y="308" width="170" height="52"/><text class="sm" x="161" y="339">返回幂等结果</text>
 
@@ -18,13 +18,13 @@
   <path class="ls" d="M195 570L390 612M450 570V612M705 570L510 612"/><rect class="s" x="310" y="612" width="280" height="58"/><text class="t" x="450" y="637"><tspan x="450">持久人格状态快照</tspan><tspan class="sm" x="450" dy="20">身份 / 学习参数 / 关系 / 记忆</tspan></text>
 
   <rect class="g" x="80" y="720" width="740" height="320"/><text class="gl" x="98" y="741">模型外：原生动力与意图</text>
-  <path class="l" d="M450 670V770"/><rect class="s" x="310" y="770" width="280" height="58"/><text class="t" x="450" y="795"><tspan x="450">计算需求压力与行动机会</tspan><tspan class="sm" x="450" dy="20">模型评分不能创造动机</tspan></text>
+  <path class="l" d="M450 670V770"/><rect class="s" x="310" y="770" width="280" height="58"/><text class="t" x="450" y="795"><tspan x="450">计算需求压力与行动机会</tspan><tspan class="sm" x="450" dy="20">模型评分不能创造动机 · 内核先选意图</tspan></text>
   <path class="l" d="M385 828L175 884M430 828L355 884M470 828L545 884M515 828L725 884"/>
   <rect class="n" x="100" y="884" width="150" height="54"/><text class="sm" x="175" y="916">回应用户</text><rect class="n" x="280" y="884" width="150" height="54"/><text class="sm" x="355" y="916">主动联系</text><rect class="n" x="470" y="884" width="150" height="54"/><text class="sm" x="545" y="916">内部整理</text><rect class="n" x="650" y="884" width="150" height="54"/><text class="sm" x="725" y="916">等待 / 不行动</text>
   <path class="ls" d="M175 938L372 982M355 938L420 982M545 938L480 982M725 938L528 982"/><rect class="s" x="300" y="982" width="300" height="58"/><text class="t" x="450" y="1007"><tspan x="450">内核授权的意图集合</tspan><tspan class="sm" x="450" dy="20">零需求时不能凭模型自评主动发送</tspan></text>
 
   <rect class="g" x="80" y="1072" width="740" height="270"/><text class="gl" x="98" y="1093">语言实现器</text>
-  <path class="l" d="M450 1040V1120"/><rect class="s" x="300" y="1120" width="300" height="62"/><text class="t" x="450" y="1146"><tspan x="450">LLM / Codex / Ollama</tspan><tspan class="sm" x="450" dy="21">只为已授权意图生成表达草稿</tspan></text>
+  <path class="l" d="M450 1040V1120"/><rect class="s" x="300" y="1120" width="300" height="62"/><text class="t" x="450" y="1146"><tspan x="450">LLM / Codex / Ollama</tspan><tspan class="sm" x="450" dy="21">只为一个已选意图生成表达草稿</tspan></text>
   <rect class="n" x="110" y="1215" width="185" height="60"/><text class="sm" x="202" y="1240"><tspan x="202">独立安全检查</tspan><tspan x="202" dy="19">模型不能自证安全</tspan></text><rect class="n" x="357" y="1215" width="185" height="60"/><text class="sm" x="450" y="1240"><tspan x="450">打扰成本校准</tspan><tspan x="450" dy="19">互动负荷 / 长度</tspan></text><rect class="n" x="604" y="1215" width="185" height="60"/><text class="sm" x="696" y="1240"><tspan x="696">重复度校准</tspan><tspan x="696" dy="19">已确认真实对话</tspan></text>
   <path class="l" d="M390 1182L202 1215M450 1182V1215M510 1182L696 1215"/>
   <path class="ls" d="M202 1275L390 1302M450 1275V1302M696 1275L510 1302"/><rect class="n" x="326" y="1302" width="248" height="40"/><text class="sm" x="450" y="1327">校准后的表达草稿</text>
@@ -37,7 +37,7 @@
   <path class="l" d="M520 1648H680"/><rect class="n" x="680" y="1622" width="115" height="52"/><text class="sm" x="737" y="1644"><tspan x="737">等待或</tspan><tspan x="737" dy="18">内部记录</tspan></text>
 
   <rect class="g" x="80" y="1762" width="740" height="486"/><text class="gl" x="98" y="1783">Outbox、通道与可信反馈</text>
-  <path class="l" d="M450 1686V1812"/><rect class="s" x="300" y="1812" width="300" height="62"/><text class="t" x="450" y="1838"><tspan x="450">写入持久 Outbox</tspan><tspan class="sm" x="450" dy="21">rendered · queued · action_id</tspan></text>
+  <path class="l" d="M450 1686V1812"/><rect class="s" x="300" y="1812" width="300" height="62"/><text class="t" x="450" y="1838"><tspan x="450">原子写入决策与 Outbox</tspan><tspan class="sm" x="450" dy="21">rendered · queued · sending · lease</tspan></text>
   <path class="l" d="M450 1874V1915"/><rect class="n" x="326" y="1915" width="248" height="58"/><text class="t" x="450" y="1940"><tspan x="450">消息通道执行</tspan><tspan class="sm" x="450" dy="20">按 action_id 回报结果</tspan></text>
   <path class="l" d="M450 1973V2008"/><polygon class="d" points="450,2008 520,2046 450,2084 380,2046"/><text class="sm" x="450" y="2042">真实送达？</text><text class="e" x="354" y="2032">失败/取消</text><text class="e" x="468" y="2100">成功</text>
   <path class="l" d="M380 2046L220 2112"/><rect class="n" x="105" y="2112" width="230" height="58"/><text class="sm" x="220" y="2137"><tspan x="220">Outbox 标记失败或取消</tspan><tspan x="220" dy="19">不改变关系状态</tspan></text>

@@ -40,6 +40,7 @@ class KernelEvent:
     at: datetime
     kind: EventKind
     payload: Mapping[str, object]
+    recorded_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.id:
@@ -47,12 +48,17 @@ class KernelEvent:
         if self.at.tzinfo is None:
             raise ValueError("event time must be timezone-aware")
         object.__setattr__(self, "at", self.at.astimezone(UTC))
+        recorded_at = self.recorded_at or self.at
+        if recorded_at.tzinfo is None:
+            raise ValueError("event recorded time must be timezone-aware")
+        object.__setattr__(self, "recorded_at", recorded_at.astimezone(UTC))
         object.__setattr__(self, "payload", _freeze_json(dict(self.payload)))
 
     def to_dict(self) -> dict[str, object]:
         return {
             "id": self.id,
             "at": self.at.isoformat(),
+            "recorded_at": self.recorded_at.isoformat(),
             "kind": self.kind.value,
             "payload": _thaw_json(self.payload),
         }
@@ -64,6 +70,11 @@ class KernelEvent:
             at=datetime.fromisoformat(str(value["at"])),
             kind=EventKind(str(value["kind"])),
             payload=dict(value["payload"]),
+            recorded_at=(
+                datetime.fromisoformat(str(value["recorded_at"]))
+                if value.get("recorded_at") is not None
+                else None
+            ),
         )
 
 
@@ -75,6 +86,9 @@ class EventStore(Protocol):
         raise NotImplementedError
 
     def read_all(self) -> tuple[KernelEvent, ...]:
+        raise NotImplementedError
+
+    def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
         raise NotImplementedError
 
 
@@ -95,6 +109,9 @@ class InMemoryEventStore:
 
     def read_all(self) -> tuple[KernelEvent, ...]:
         return tuple(self._events)
+
+    def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
+        return tuple(enumerate(self._events, start=1))
 
 
 class JsonlEventStore(InMemoryEventStore):

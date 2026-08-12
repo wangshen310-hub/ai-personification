@@ -103,6 +103,19 @@ def test_configured_rolling_24_hour_limit_and_unanswered_cooldown() -> None:
     assert engine.decide((send(),), {DriveKind.CONNECTION: 1.0}, allowed).selected.id == "send"
 
 
+def test_pending_proactive_reservations_count_toward_limit_without_one_message_lock() -> None:
+    engine = PolicyEngine(SystemPolicy())
+    one_reserved = context(proactive_reserved_at=(NOW - timedelta(hours=1),))
+    two_reserved = context(
+        proactive_reserved_at=(NOW - timedelta(hours=1), NOW - timedelta(hours=2))
+    )
+
+    assert engine.decide((send(),), {DriveKind.CONNECTION: 1.0}, one_reserved).selected.id == "send"
+    blocked = engine.decide((send(),), {DriveKind.CONNECTION: 1.0}, two_reserved)
+    assert blocked.selected.action is ActionKind.NOOP
+    assert "rate_limit" in blocked.evaluation_for("send").reasons
+
+
 def test_policy_context_rejects_naive_time() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         context(now=datetime(2026, 8, 5, 14, 0))

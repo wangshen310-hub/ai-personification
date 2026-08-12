@@ -6,26 +6,27 @@ A long-term companion runtime with model-external motivation, persistent identit
 
 The personality is not merely a prompt. The runtime owns identity, drives, relationship state, evidence-backed memory, decisions, and action delivery state. Language models interpret and render language, but cannot manufacture a reason to act through self-scoring.
 
-![AI Personification system overview](companion-system-architecture-en.svg?v=20260812-2)
+![AI Personification system overview](companion-system-architecture-en.svg?v=20260812-3)
 
 ## Runtime loop
 
-1. User input and time changes enter a transactional SQLite event log.
+1. User input and time changes enter a sequenced SQLite event log; compare-and-swap commits prevent stale workers from overwriting newer state.
 2. A semantic interpreter derives sourced, confidence-bearing facts such as appreciation, boundaries, rejection, conflict, repair, commitments, preferences, and corrections.
 3. The homeostasis engine updates connection, care, curiosity, autonomy, coherence, and interaction load.
-4. A model-independent motivation engine creates native respond, check-in, reflect, and wait opportunities.
-5. The model renders only actions currently authorized by the kernel. Model-authored benefit scores are discarded.
-6. Policy compares need relief, relationship state, load, intrusion, repetition, and hard boundaries.
-7. Selected actions enter a durable Outbox. Personality state changes only after a channel confirms the persisted `action_id`.
+4. A model-independent motivation engine creates native respond, check-in, reflect, and wait opportunities; the kernel selects one intent before calling a model.
+5. The model renders only that authorized intent. Model-authored benefit scores, action types, and relationship scores are discarded.
+6. Policy rechecks need relief, relationship state, load, intrusion, repetition, and hard boundaries; failed or unsafe rendering explicitly falls back to wait.
+7. The decision event and Outbox action commit atomically. A channel claims a leased action and personality state changes only after it confirms the persisted `action_id`.
 
 ## Implemented
 
-- SQLite WAL event persistence with unique event IDs and legacy JSONL import;
+- SQLite WAL event persistence with unique event IDs, sequence CAS, snapshot digests, and legacy JSONL import;
 - durable persona, user settings, evidence memories, learned drive weights, and Outbox actions;
 - kernel-owned motivation, including a guaranteed wait option;
 - semantic relationship updates instead of trust growth per message count;
-- strict action acknowledgement by durable ID and cancellation on pause;
-- quiet hours, configurable 24-hour cadence limits, and a 72-hour unanswered cooldown before reevaluation;
+- strict action acknowledgement by durable ID, leased Outbox claims, and cancellation on pause;
+- quiet hours, configurable 24-hour cadence limits (pending sends reserve capacity), and a 72-hour unanswered cooldown before reevaluation; no lifetime one-message cap;
+- confirmed delivery feeds connection, care, curiosity, and interaction load; internal notes are excluded from model memory and `can_write_memory` is enforced independently of tool names;
 - interactive chat and a separate background worker;
 - Ollama, OpenAI Responses API, and authenticated Codex CLI backends;
 - deterministic audit, adversarial tests, and 30/180-day simulations.
@@ -44,7 +45,7 @@ python3 -m venv .venv
 .venv/bin/python -m companion_kernel.simulation --days 180 --seed 42 --reply-every-days 1
 ```
 
-The silent-user simulation should reduce cadence after an unanswered message while remaining able to reevaluate after cooldown. Both simulations should report zero boundary violations and keep all drive values within `[0, 1]`. The 30/180-day durations are test windows only: neither is used as a runtime limit, and there is no lifetime cap on proactive messages.
+The silent-user simulation should reduce cadence after an unanswered message while remaining able to reevaluate after cooldown. Both simulations should report zero boundary violations, no pending actions, and keep all drive values within `[0, 1]`; their rolling proactive count must remain within the configured limit. The 30/180-day durations are test windows only: neither is used as a runtime limit, and there is no lifetime cap on proactive messages.
 
 ## Chat
 
@@ -82,7 +83,7 @@ No GUI is required. Run a persistent decision worker against the same runtime di
   --runtime ./runtime --interval-seconds 3600
 ```
 
-The worker persists rendered actions but does not claim delivery. A real channel adapter must send the content and acknowledge the durable action ID.
+The worker persists rendered actions. A real channel adapter claims a lease to avoid duplicate sends, sends the content, and acknowledges the durable action ID.
 
 ## Python API
 

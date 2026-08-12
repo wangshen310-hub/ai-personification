@@ -36,6 +36,17 @@ def test_user_message_updates_drives_once() -> None:
     assert twice == once
 
 
+def test_confirmed_proactive_message_feeds_connection_and_curiosity() -> None:
+    engine = HomeostasisEngine.defaults()
+    before = engine.initial_state(START)
+    event = make_event("proactive-1", EventKind.PROACTIVE_SENT, START)
+    after = engine.apply_event(before, event, resolve_event_impacts(event))
+
+    assert after[DriveKind.CONNECTION].value > before[DriveKind.CONNECTION].value
+    assert after[DriveKind.CARE].value > before[DriveKind.CARE].value
+    assert after[DriveKind.CURIOSITY].value > before[DriveKind.CURIOSITY].value
+
+
 def test_urgency_is_zero_inside_target_and_capped_outside() -> None:
     engine = HomeostasisEngine.defaults()
     state = engine.initial_state(START)

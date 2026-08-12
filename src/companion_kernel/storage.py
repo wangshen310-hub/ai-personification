@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
 import sqlite3
@@ -12,7 +12,7 @@ from typing import Iterable
 from companion_kernel.events import KernelEvent
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _connect(path: Path) -> sqlite3.Connection:
@@ -41,6 +41,7 @@ class SQLiteRuntimeStore:
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT,
                     id TEXT NOT NULL UNIQUE,
                     at TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
                     kind TEXT NOT NULL,
                     payload TEXT NOT NULL
                 );
@@ -71,12 +72,26 @@ class SQLiteRuntimeStore:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     outcome_event_id TEXT UNIQUE,
+                    claimed_by TEXT,
+                    claim_until TEXT,
                     FOREIGN KEY(source_event_id) REFERENCES events(id),
                     FOREIGN KEY(decision_event_id) REFERENCES events(id)
                 );
                 CREATE INDEX IF NOT EXISTS memories_source_idx ON memories(source_event_id);
                 CREATE INDEX IF NOT EXISTS outbox_status_idx ON outbox(status, created_at);
                 """
+            )
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(events)")}
+            if "recorded_at" not in columns:
+                db.execute("ALTER TABLE events ADD COLUMN recorded_at TEXT")
+                db.execute("UPDATE events SET recorded_at = at WHERE recorded_at IS NULL")
+            outbox_columns = {row["name"] for row in db.execute("PRAGMA table_info(outbox)")}
+            if "claimed_by" not in outbox_columns:
+                db.execute("ALTER TABLE outbox ADD COLUMN claimed_by TEXT")
+            if "claim_until" not in outbox_columns:
+                db.execute("ALTER TABLE outbox ADD COLUMN claim_until TEXT")
+            db.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS outbox_decision_idx ON outbox(decision_event_id)"
             )
             db.execute(
                 "INSERT OR REPLACE INTO metadata(key, value) VALUES('schema_version', ?)",
@@ -87,10 +102,53 @@ class SQLiteRuntimeStore:
         encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
         with _connect(self.path) as db:
             cursor = db.execute(
-                "INSERT OR IGNORE INTO events(id, at, kind, payload) VALUES(?, ?, ?, ?)",
-                (event.id, event.at.isoformat(), event.kind.value, encoded),
+                "INSERT OR IGNORE INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
+                (
+                    event.id,
+                    event.at.isoformat(),
+                    event.recorded_at.isoformat(),
+                    event.kind.value,
+                    encoded,
+                ),
             )
             return cursor.rowcount == 1
+
+    def latest_sequence(self) -> int:
+        with _connect(self.path) as db:
+            row = db.execute("SELECT COALESCE(MAX(sequence), 0) AS sequence FROM events").fetchone()
+        return int(row["sequence"])
+
+    def append_if_sequence(self, event: KernelEvent, expected_sequence: int) -> int | None:
+        """Append one event only if the caller read the current event tail."""
+
+        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
+        with _connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = int(
+                db.execute("SELECT COALESCE(MAX(sequence), 0) AS sequence FROM events").fetchone()[
+                    "sequence"
+                ]
+            )
+            if current != expected_sequence:
+                db.rollback()
+                return None
+            try:
+                cursor = db.execute(
+                    "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
+                    (
+                        event.id,
+                        event.at.isoformat(),
+                        event.recorded_at.isoformat(),
+                        event.kind.value,
+                        encoded,
+                    ),
+                )
+            except sqlite3.IntegrityError:
+                db.rollback()
+                return None
+            sequence = int(cursor.lastrowid)
+            db.commit()
+            return sequence
 
     def contains(self, event_id: str) -> bool:
         with _connect(self.path) as db:
@@ -98,18 +156,25 @@ class SQLiteRuntimeStore:
         return row is not None
 
     def read_all(self) -> tuple[KernelEvent, ...]:
+        return tuple(event for _, event in self.read_all_with_sequences())
+
+    def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
         with _connect(self.path) as db:
             rows = db.execute(
-                "SELECT id, at, kind, payload FROM events ORDER BY sequence"
+                "SELECT sequence, id, at, recorded_at, kind, payload FROM events ORDER BY sequence"
             ).fetchall()
         return tuple(
-            KernelEvent.from_dict(
-                {
-                    "id": row["id"],
-                    "at": row["at"],
-                    "kind": row["kind"],
-                    "payload": json.loads(row["payload"]),
-                }
+            (
+                int(row["sequence"]),
+                KernelEvent.from_dict(
+                    {
+                        "id": row["id"],
+                        "at": row["at"],
+                        "recorded_at": row["recorded_at"],
+                        "kind": row["kind"],
+                        "payload": json.loads(row["payload"]),
+                    },
+                ),
             )
             for row in rows
         )
@@ -178,8 +243,8 @@ class SQLiteRuntimeStore:
             cursor = db.execute(
                 """INSERT OR IGNORE INTO outbox
                    (action_id, source_event_id, decision_event_id, candidate_id, action,
-                    proactive, content, status, created_at, updated_at)
-                   VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    proactive, content, status, created_at, updated_at, claimed_by, claim_until)
+                   VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     action.action_id,
                     action.source_event_id,
@@ -191,14 +256,138 @@ class SQLiteRuntimeStore:
                     action.status,
                     action.created_at.isoformat(),
                     action.updated_at.isoformat(),
+                    action.claimed_by,
+                    action.claim_until.isoformat() if action.claim_until else None,
                 ),
             )
             return cursor.rowcount == 1
+
+    def append_event_and_action_if_sequence(
+        self,
+        event: KernelEvent,
+        expected_sequence: int,
+        action: "OutboxAction | None",
+        *,
+        cancel_pending_at: datetime | None = None,
+    ) -> int | None:
+        """Commit a decision event and its Outbox row in one SQLite transaction."""
+
+        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
+        with _connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = int(
+                db.execute("SELECT COALESCE(MAX(sequence), 0) AS sequence FROM events").fetchone()[
+                    "sequence"
+                ]
+            )
+            if current != expected_sequence:
+                db.rollback()
+                return None
+            try:
+                cursor = db.execute(
+                    "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
+                    (
+                        event.id,
+                        event.at.isoformat(),
+                        event.recorded_at.isoformat(),
+                        event.kind.value,
+                        encoded,
+                    ),
+                )
+                if action is not None:
+                    db.execute(
+                        """INSERT INTO outbox
+                           (action_id, source_event_id, decision_event_id, candidate_id, action,
+                            proactive, content, status, created_at, updated_at, claimed_by, claim_until)
+                           VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            action.action_id,
+                            action.source_event_id,
+                            action.decision_event_id,
+                            action.candidate_id,
+                            action.action,
+                            int(action.proactive),
+                            action.content,
+                            action.status,
+                            action.created_at.isoformat(),
+                            action.updated_at.isoformat(),
+                            action.claimed_by,
+                            action.claim_until.isoformat() if action.claim_until else None,
+                        ),
+                    )
+                if cancel_pending_at is not None:
+                    db.execute(
+                        """UPDATE outbox SET status='cancelled', updated_at=?, claimed_by=NULL, claim_until=NULL
+                           WHERE status IN ('planned', 'rendered', 'queued', 'sending')""",
+                        (cancel_pending_at.isoformat(),),
+                    )
+            except sqlite3.IntegrityError:
+                db.rollback()
+                return None
+            sequence = int(cursor.lastrowid)
+            db.commit()
+            return sequence
 
     def get_action(self, action_id: str) -> "OutboxAction | None":
         with _connect(self.path) as db:
             row = db.execute("SELECT * FROM outbox WHERE action_id = ?", (action_id,)).fetchone()
         return None if row is None else OutboxAction.from_row(row)
+
+    def get_action_for_decision(self, decision_event_id: str) -> "OutboxAction | None":
+        with _connect(self.path) as db:
+            row = db.execute(
+                "SELECT * FROM outbox WHERE decision_event_id = ?",
+                (decision_event_id,),
+            ).fetchone()
+        return None if row is None else OutboxAction.from_row(row)
+
+    def pending_proactive_times(self) -> tuple[datetime, ...]:
+        with _connect(self.path) as db:
+            rows = db.execute(
+                """SELECT created_at FROM outbox
+                   WHERE proactive = 1 AND status IN ('planned', 'rendered', 'queued', 'sending')
+                   ORDER BY created_at"""
+            ).fetchall()
+        return tuple(datetime.fromisoformat(row["created_at"]) for row in rows)
+
+    def claim_actions(
+        self,
+        worker_id: str,
+        *,
+        now: datetime,
+        lease_seconds: int = 300,
+        limit: int = 16,
+    ) -> tuple["OutboxAction", ...]:
+        """Atomically claim pending actions so multiple channel workers cannot send twice."""
+
+        if not worker_id.strip():
+            raise ValueError("worker_id cannot be empty")
+        if lease_seconds <= 0 or limit <= 0:
+            raise ValueError("lease_seconds and limit must be positive")
+        if now.tzinfo is None:
+            raise ValueError("claim time must be timezone-aware")
+        now_utc = now.astimezone(UTC)
+        claim_time = now_utc + timedelta(seconds=lease_seconds)
+        with _connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = db.execute(
+                """SELECT action_id FROM outbox
+                   WHERE status IN ('planned', 'rendered', 'queued')
+                      OR (status = 'sending' AND (claim_until IS NULL OR julianday(claim_until) <= julianday(?)))
+                   ORDER BY created_at LIMIT ?""",
+                (now_utc.isoformat(), limit),
+            ).fetchall()
+            ids = [row["action_id"] for row in rows]
+            if ids:
+                placeholders = ",".join("?" for _ in ids)
+                db.execute(
+                    f"""UPDATE outbox SET status='sending', claimed_by=?, claim_until=?, updated_at=?
+                        WHERE action_id IN ({placeholders})""",
+                    (worker_id, claim_time.isoformat(), now_utc.isoformat(), *ids),
+                )
+            db.commit()
+        claimed = tuple(self.get_action(action_id) for action_id in ids)
+        return tuple(item for item in claimed if item is not None)
 
     def transition_action(
         self,
@@ -213,7 +402,8 @@ class SQLiteRuntimeStore:
         parameters = (status, at.isoformat(), outcome_event_id, action_id, *expected)
         with _connect(self.path) as db:
             cursor = db.execute(
-                f"""UPDATE outbox SET status = ?, updated_at = ?, outcome_event_id = COALESCE(?, outcome_event_id)
+                f"""UPDATE outbox SET status = ?, updated_at = ?, outcome_event_id = COALESCE(?, outcome_event_id),
+                           claimed_by = NULL, claim_until = NULL
                     WHERE action_id = ? AND status IN ({placeholders})""",
                 parameters,
             )
@@ -235,14 +425,21 @@ class SQLiteRuntimeStore:
             if row["status"] == "delivered" and row["outcome_event_id"] == event.id:
                 db.rollback()
                 return False
-            if row["status"] not in {"planned", "rendered", "queued"}:
+            if row["status"] not in {"planned", "rendered", "queued", "sending"}:
                 raise ValueError(f"cannot deliver action in {row['status']} state")
             db.execute(
-                "INSERT INTO events(id, at, kind, payload) VALUES(?, ?, ?, ?)",
-                (event.id, event.at.isoformat(), event.kind.value, encoded),
+                "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
+                (
+                    event.id,
+                    event.at.isoformat(),
+                    event.recorded_at.isoformat(),
+                    event.kind.value,
+                    encoded,
+                ),
             )
             db.execute(
-                """UPDATE outbox SET status='delivered', updated_at=?, outcome_event_id=?
+                """UPDATE outbox SET status='delivered', updated_at=?, outcome_event_id=?,
+                           claimed_by=NULL, claim_until=NULL
                    WHERE action_id=?""",
                 (at.isoformat(), event.id, action_id),
             )
@@ -257,15 +454,15 @@ class SQLiteRuntimeStore:
     def pending_actions(self) -> tuple["OutboxAction", ...]:
         with _connect(self.path) as db:
             rows = db.execute(
-                "SELECT * FROM outbox WHERE status IN ('rendered', 'queued') ORDER BY created_at"
+                "SELECT * FROM outbox WHERE status IN ('planned', 'rendered', 'queued', 'sending') ORDER BY created_at"
             ).fetchall()
         return tuple(OutboxAction.from_row(row) for row in rows)
 
     def cancel_pending(self, at: datetime) -> int:
         with _connect(self.path) as db:
             cursor = db.execute(
-                """UPDATE outbox SET status='cancelled', updated_at=?
-                   WHERE status IN ('planned', 'rendered', 'queued')""",
+                """UPDATE outbox SET status='cancelled', updated_at=?, claimed_by=NULL, claim_until=NULL
+                   WHERE status IN ('planned', 'rendered', 'queued', 'sending')""",
                 (at.isoformat(),),
             )
             return cursor.rowcount
@@ -284,6 +481,8 @@ class OutboxAction:
     created_at: datetime
     updated_at: datetime
     outcome_event_id: str | None = None
+    claimed_by: str | None = None
+    claim_until: datetime | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "OutboxAction":
@@ -299,4 +498,10 @@ class OutboxAction:
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             outcome_event_id=row["outcome_event_id"],
+            claimed_by=row["claimed_by"] if "claimed_by" in row.keys() else None,
+            claim_until=(
+                datetime.fromisoformat(row["claim_until"])
+                if "claim_until" in row.keys() and row["claim_until"]
+                else None
+            ),
         )

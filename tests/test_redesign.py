@@ -78,7 +78,7 @@ def test_high_connection_pressure_creates_native_proactive_opportunity(tmp_path)
     assert result.response_text == "模型自称这是满分候选"
     assert result.action_id is not None
     assert result.kernel.decision is not None
-    evaluation = result.kernel.decision.evaluation_for("model-high-score")
+    evaluation = result.kernel.decision.evaluation_for("native:check-in")
     assert evaluation.score < 2.0
 
 

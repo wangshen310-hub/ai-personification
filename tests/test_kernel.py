@@ -133,6 +133,9 @@ def test_event_remains_applied_when_snapshot_write_fails(tmp_path) -> None:
         snapshots,
         JsonlAuditLog(tmp_path / "audit.jsonl"),
     )
+    # The event is committed before the snapshot. Simulate a snapshot failure
+    # on that first post-bootstrap save and verify replay remains authoritative.
+    snapshots.calls = 1
     message = event("message-after-bootstrap", EventKind.USER_MESSAGE, clock)
     with pytest.raises(OSError, match="disk full"):
         kernel.process(message)

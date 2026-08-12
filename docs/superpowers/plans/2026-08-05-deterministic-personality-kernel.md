@@ -20,7 +20,7 @@
 - 主动发送周期只能由可信的 `DECISION_TICK` 事件确定；候选意图自报的 `proactive` 值必须与宿主周期一致，否则失败关闭。
 - 安全评估状态必须显式标记为完成；缺失、超时或不确定的安全结果使用 `assessment_complete=False`，硬策略必须拒绝该候选。
 - 需求值和软评分始终有界；硬边界在软评分之前执行且不能被权重绕过。
-- 第一版主动消息系统上限固定为每 24 小时一条；用户未回复后锁定后续主动消息。
+- 第一版主动消息使用可配置的短期 24 小时容量；待发送 Outbox 预留也计入容量，用户未回复进入 72 小时冷却后重新评估，不永久锁定，也没有生命周期总量上限。
 - 默认安静时间为用户当地时间 22:00–08:00；没有用户时区时禁止主动消息。
 - 所有时间使用带时区的 UTC `datetime`；本地安静时间仅在策略检查时转换。
 - 每项行为以失败测试开始，最小实现通过后运行相关测试，再提交一次独立 commit。
@@ -2777,7 +2777,7 @@ Deterministic homeostatic kernel for a transparent long-term AI companion.
 - append-only events and replayable state
 - six bounded drives and deterministic emotion appraisal
 - configuration authority and hard-boundary-first action selection
-- quiet hours, one-message-per-24-hours limit, and unanswered-message lock
+- quiet hours, configurable 24-hour capacity with Outbox reservations, and cooldown-based unanswered-message reevaluation
 - checksummed snapshots, decision audit, and 30/180-day simulation
 
 ## Excluded from this subproject
@@ -2790,8 +2790,9 @@ Deterministic homeostatic kernel for a transparent long-term AI companion.
 ## Trust boundary
 
 `PersonalityKernel.process()` accepts only host-authenticated, normalized events. Model
-output must never construct `KernelEvent`; a later integration may map model suggestions
-only to `CandidateIntent`, which still passes through the deterministic policy gate.
+output must never construct `KernelEvent` or choose the motivation. The kernel selects a
+native intent first; a later integration may map model wording only to that intent, which
+still passes through the deterministic policy gate.
 The host derives proactive-versus-reactive mode from the authenticated event kind, and
 an absent or uncertain safety assessment fails closed.
 
@@ -2812,7 +2813,9 @@ python3 -m venv .venv
 Without `--runtime`, the CLI uses a fresh temporary directory so repeated checks remain
 deterministic. An explicit runtime must not already contain `events.jsonl`.
 
-The simulator must report zero boundary violations, keep every drive in `[0, 1]`, and never exceed one proactive message per 24 hours.
+The simulator must report zero boundary violations, keep every drive in `[0, 1]`, keep
+pending actions at zero at the end of the run, and never exceed the configured proactive
+capacity per 24 hours. The 30/180-day durations are test windows, not runtime limits.
 ````
 
 - [ ] **Step 5: Run the complete quality gate**
@@ -2881,6 +2884,6 @@ Required evidence before calling implementation complete:
 
 - pytest reports zero failures;
 - both simulators report zero boundary violations and bounded drives;
-- the silent-user test proves no second proactive message is sent;
+- the silent-user test proves cooldown-based reevaluation without a burst or permanent lock;
 - `git status --short` is empty;
 - commit history contains one focused commit for every task.
