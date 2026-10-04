@@ -2,26 +2,83 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
 import sqlite3
-from typing import Iterable
+from typing import Collection, Iterable, Iterator
 
 from companion_kernel.events import KernelEvent
+from companion_kernel.types import EventKind
 
 
 SCHEMA_VERSION = 2
 
+_EVENT_COLUMNS = "sequence, id, at, recorded_at, kind, payload"
+_EVENT_INSERT_TARGET = "INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)"
+_ACTION_INSERT_TARGET = """INTO outbox
+   (action_id, source_event_id, decision_event_id, candidate_id, action,
+    proactive, content, status, created_at, updated_at, claimed_by, claim_until)
+   VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+_REVERSE_PAGE_SIZE = 64
 
-def _connect(path: Path) -> sqlite3.Connection:
+
+@contextmanager
+def _connect(path: Path) -> Iterator[sqlite3.Connection]:
+    """Yield a connection that commits on success, rolls back on error, and always closes."""
+
     connection = sqlite3.connect(path, timeout=30.0)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA journal_mode=WAL")
-    connection.execute("PRAGMA foreign_keys=ON")
-    connection.execute("PRAGMA busy_timeout=30000")
-    return connection
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys=ON")
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
+def _event_params(event: KernelEvent) -> tuple[str, str, str, str, str]:
+    return (
+        event.id,
+        event.at.isoformat(),
+        event.recorded_at.isoformat(),
+        event.kind.value,
+        json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True),
+    )
+
+
+def _event_from_row(row: sqlite3.Row) -> tuple[int, KernelEvent]:
+    return (
+        int(row["sequence"]),
+        KernelEvent.from_dict(
+            {
+                "id": row["id"],
+                "at": row["at"],
+                "recorded_at": row["recorded_at"],
+                "kind": row["kind"],
+                "payload": json.loads(row["payload"]),
+            },
+        ),
+    )
+
+
+def _action_params(action: "OutboxAction") -> tuple[object, ...]:
+    return (
+        action.action_id,
+        action.source_event_id,
+        action.decision_event_id,
+        action.candidate_id,
+        action.action,
+        int(action.proactive),
+        action.content,
+        action.status,
+        action.created_at.isoformat(),
+        action.updated_at.isoformat(),
+        action.claimed_by,
+        action.claim_until.isoformat() if action.claim_until else None,
+    )
 
 
 class SQLiteRuntimeStore:
@@ -31,6 +88,8 @@ class SQLiteRuntimeStore:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
         with _connect(path) as db:
+            # WAL is persisted in the database file, so it only needs setting once.
+            db.execute("PRAGMA journal_mode=WAL")
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS metadata (
@@ -99,18 +158,8 @@ class SQLiteRuntimeStore:
             )
 
     def append(self, event: KernelEvent) -> bool:
-        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
         with _connect(self.path) as db:
-            cursor = db.execute(
-                "INSERT OR IGNORE INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
-                (
-                    event.id,
-                    event.at.isoformat(),
-                    event.recorded_at.isoformat(),
-                    event.kind.value,
-                    encoded,
-                ),
-            )
+            cursor = db.execute(f"INSERT OR IGNORE {_EVENT_INSERT_TARGET}", _event_params(event))
             return cursor.rowcount == 1
 
     def latest_sequence(self) -> int:
@@ -121,7 +170,6 @@ class SQLiteRuntimeStore:
     def append_if_sequence(self, event: KernelEvent, expected_sequence: int) -> int | None:
         """Append one event only if the caller read the current event tail."""
 
-        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
         with _connect(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
             current = int(
@@ -133,16 +181,7 @@ class SQLiteRuntimeStore:
                 db.rollback()
                 return None
             try:
-                cursor = db.execute(
-                    "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
-                    (
-                        event.id,
-                        event.at.isoformat(),
-                        event.recorded_at.isoformat(),
-                        event.kind.value,
-                        encoded,
-                    ),
-                )
+                cursor = db.execute(f"INSERT {_EVENT_INSERT_TARGET}", _event_params(event))
             except sqlite3.IntegrityError:
                 db.rollback()
                 return None
@@ -159,25 +198,39 @@ class SQLiteRuntimeStore:
         return tuple(event for _, event in self.read_all_with_sequences())
 
     def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
+        return self.read_after(0)
+
+    def read_after(self, sequence: int) -> tuple[tuple[int, KernelEvent], ...]:
+        """Return committed events whose sequence is greater than ``sequence``."""
+
         with _connect(self.path) as db:
             rows = db.execute(
-                "SELECT sequence, id, at, recorded_at, kind, payload FROM events ORDER BY sequence"
+                f"SELECT {_EVENT_COLUMNS} FROM events WHERE sequence > ? ORDER BY sequence",
+                (sequence,),
             ).fetchall()
-        return tuple(
-            (
-                int(row["sequence"]),
-                KernelEvent.from_dict(
-                    {
-                        "id": row["id"],
-                        "at": row["at"],
-                        "recorded_at": row["recorded_at"],
-                        "kind": row["kind"],
-                        "payload": json.loads(row["payload"]),
-                    },
-                ),
-            )
-            for row in rows
-        )
+        return tuple(_event_from_row(row) for row in rows)
+
+    def iter_reversed(self, kinds: Collection[EventKind]) -> Iterator[KernelEvent]:
+        """Yield events of the given kinds newest first, fetching lazily in small pages."""
+
+        values = tuple(kind.value for kind in kinds)
+        if not values:
+            return
+        placeholders = ",".join("?" for _ in values)
+        before: int | None = None
+        while True:
+            with _connect(self.path) as db:
+                rows = db.execute(
+                    f"""SELECT {_EVENT_COLUMNS} FROM events
+                        WHERE kind IN ({placeholders}) AND (? IS NULL OR sequence < ?)
+                        ORDER BY sequence DESC LIMIT ?""",
+                    (*values, before, before, _REVERSE_PAGE_SIZE),
+                ).fetchall()
+            for row in rows:
+                yield _event_from_row(row)[1]
+            if len(rows) < _REVERSE_PAGE_SIZE:
+                return
+            before = int(rows[-1]["sequence"])
 
     def import_events(self, events: Iterable[KernelEvent]) -> int:
         imported = 0
@@ -241,24 +294,8 @@ class SQLiteRuntimeStore:
     def create_action(self, action: "OutboxAction") -> bool:
         with _connect(self.path) as db:
             cursor = db.execute(
-                """INSERT OR IGNORE INTO outbox
-                   (action_id, source_event_id, decision_event_id, candidate_id, action,
-                    proactive, content, status, created_at, updated_at, claimed_by, claim_until)
-                   VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    action.action_id,
-                    action.source_event_id,
-                    action.decision_event_id,
-                    action.candidate_id,
-                    action.action,
-                    int(action.proactive),
-                    action.content,
-                    action.status,
-                    action.created_at.isoformat(),
-                    action.updated_at.isoformat(),
-                    action.claimed_by,
-                    action.claim_until.isoformat() if action.claim_until else None,
-                ),
+                f"INSERT OR IGNORE {_ACTION_INSERT_TARGET}",
+                _action_params(action),
             )
             return cursor.rowcount == 1
 
@@ -272,7 +309,6 @@ class SQLiteRuntimeStore:
     ) -> int | None:
         """Commit a decision event and its Outbox row in one SQLite transaction."""
 
-        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
         with _connect(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
             current = int(
@@ -284,37 +320,9 @@ class SQLiteRuntimeStore:
                 db.rollback()
                 return None
             try:
-                cursor = db.execute(
-                    "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
-                    (
-                        event.id,
-                        event.at.isoformat(),
-                        event.recorded_at.isoformat(),
-                        event.kind.value,
-                        encoded,
-                    ),
-                )
+                cursor = db.execute(f"INSERT {_EVENT_INSERT_TARGET}", _event_params(event))
                 if action is not None:
-                    db.execute(
-                        """INSERT INTO outbox
-                           (action_id, source_event_id, decision_event_id, candidate_id, action,
-                            proactive, content, status, created_at, updated_at, claimed_by, claim_until)
-                           VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (
-                            action.action_id,
-                            action.source_event_id,
-                            action.decision_event_id,
-                            action.candidate_id,
-                            action.action,
-                            int(action.proactive),
-                            action.content,
-                            action.status,
-                            action.created_at.isoformat(),
-                            action.updated_at.isoformat(),
-                            action.claimed_by,
-                            action.claim_until.isoformat() if action.claim_until else None,
-                        ),
-                    )
+                    db.execute(f"INSERT {_ACTION_INSERT_TARGET}", _action_params(action))
                 if cancel_pending_at is not None:
                     db.execute(
                         """UPDATE outbox SET status='cancelled', updated_at=?, claimed_by=NULL, claim_until=NULL
@@ -412,9 +420,7 @@ class SQLiteRuntimeStore:
     def confirm_delivery(self, action_id: str, event: KernelEvent, at: datetime) -> bool:
         """Atomically bind one delivered outcome event to one pending action."""
 
-        encoded = json.dumps(event.to_dict()["payload"], ensure_ascii=False, sort_keys=True)
-        db = _connect(self.path)
-        try:
+        with _connect(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
                 "SELECT status, outcome_event_id FROM outbox WHERE action_id = ?",
@@ -427,16 +433,7 @@ class SQLiteRuntimeStore:
                 return False
             if row["status"] not in {"planned", "rendered", "queued", "sending"}:
                 raise ValueError(f"cannot deliver action in {row['status']} state")
-            db.execute(
-                "INSERT INTO events(id, at, recorded_at, kind, payload) VALUES(?, ?, ?, ?, ?)",
-                (
-                    event.id,
-                    event.at.isoformat(),
-                    event.recorded_at.isoformat(),
-                    event.kind.value,
-                    encoded,
-                ),
-            )
+            db.execute(f"INSERT {_EVENT_INSERT_TARGET}", _event_params(event))
             db.execute(
                 """UPDATE outbox SET status='delivered', updated_at=?, outcome_event_id=?,
                            claimed_by=NULL, claim_until=NULL
@@ -445,11 +442,6 @@ class SQLiteRuntimeStore:
             )
             db.commit()
             return True
-        except Exception:
-            db.rollback()
-            raise
-        finally:
-            db.close()
 
     def pending_actions(self) -> tuple["OutboxAction", ...]:
         with _connect(self.path) as db:

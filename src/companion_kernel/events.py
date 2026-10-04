@@ -5,7 +5,7 @@ from math import isfinite
 import os
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping, Protocol
+from typing import Collection, Iterator, Mapping, Protocol
 
 from companion_kernel.types import EventKind
 
@@ -91,6 +91,15 @@ class EventStore(Protocol):
     def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
         raise NotImplementedError
 
+    def latest_sequence(self) -> int:
+        raise NotImplementedError
+
+    def read_after(self, sequence: int) -> tuple[tuple[int, KernelEvent], ...]:
+        raise NotImplementedError
+
+    def iter_reversed(self, kinds: Collection[EventKind]) -> Iterator[KernelEvent]:
+        raise NotImplementedError
+
 
 class InMemoryEventStore:
     def __init__(self) -> None:
@@ -111,7 +120,17 @@ class InMemoryEventStore:
         return tuple(self._events)
 
     def read_all_with_sequences(self) -> tuple[tuple[int, KernelEvent], ...]:
-        return tuple(enumerate(self._events, start=1))
+        return self.read_after(0)
+
+    def latest_sequence(self) -> int:
+        return len(self._events)
+
+    def read_after(self, sequence: int) -> tuple[tuple[int, KernelEvent], ...]:
+        start = max(sequence, 0)
+        return tuple(enumerate(self._events[start:], start=start + 1))
+
+    def iter_reversed(self, kinds: Collection[EventKind]) -> Iterator[KernelEvent]:
+        return (event for event in reversed(self._events) if event.kind in kinds)
 
 
 class JsonlEventStore(InMemoryEventStore):

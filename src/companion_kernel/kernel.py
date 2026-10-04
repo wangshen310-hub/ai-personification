@@ -27,6 +27,15 @@ class KernelResult:
 
 ActionBuilder = Callable[[PolicyDecision, KernelState], OutboxAction | None]
 
+_DIALOGUE_KINDS = frozenset(
+    {
+        EventKind.USER_MESSAGE,
+        EventKind.ASSISTANT_MESSAGE_SENT,
+        EventKind.PROACTIVE_SENT,
+        EventKind.INTERNAL_NOTE_CREATED,
+    }
+)
+
 
 class PersonalityKernel:
     def __init__(
@@ -54,7 +63,7 @@ class PersonalityKernel:
         runtime_dir.mkdir(parents=True, exist_ok=True)
         store = SQLiteRuntimeStore(runtime_dir / "runtime.db")
         legacy_path = runtime_dir / "events.jsonl"
-        if not store.read_all() and legacy_path.exists():
+        if store.latest_sequence() == 0 and legacy_path.exists():
             store.import_events(JsonlEventStore(legacy_path).read_all())
         return cls(
             clock,
@@ -73,7 +82,7 @@ class PersonalityKernel:
         return self._runtime_store
 
     def _ensure_bootstrap(self) -> None:
-        if self._events.read_all():
+        if self._events.latest_sequence() > 0:
             return
         event = KernelEvent(
             id="__kernel_created__",
@@ -88,9 +97,8 @@ class PersonalityKernel:
         return KernelState.initial(at, drives, EmotionState.neutral(at))
 
     def _restore(self) -> KernelState:
-        entries = self._events.read_all_with_sequences()
-        events = tuple(event for _, event in entries)
-        if not events:
+        latest_sequence = self._events.latest_sequence()
+        if latest_sequence == 0:
             raise RuntimeError("event store must contain the bootstrap event")
         try:
             snapshot = self._snapshots.load()
@@ -99,16 +107,18 @@ class PersonalityKernel:
         snapshot_valid = (
             snapshot is not None
             and snapshot.event_sequence == snapshot.version
-            and snapshot.event_sequence <= len(entries)
+            and snapshot.event_sequence <= latest_sequence
             and (snapshot.event_sequence == 0 or bool(snapshot.event_digest))
         )
+        # Only replay events committed after the snapshot instead of decoding the
+        # whole log; this keeps each commit O(tail) rather than O(history).
         if snapshot_valid:
             state = snapshot
-            tail = entries[snapshot.event_sequence :]
+            tail = self._events.read_after(snapshot.event_sequence)
             digest = snapshot.event_digest
         else:
-            state = self._initial(events[0].at)
-            tail = entries
+            tail = self._events.read_after(0)
+            state = self._initial(tail[0][1].at)
             digest = ""
         for sequence, event in tail:
             state = self._reduce(state, event)
@@ -182,7 +192,7 @@ class PersonalityKernel:
         if limit == 0:
             return ()
         dialogue: list[str] = []
-        for event in reversed(self._events.read_all()):
+        for event in self._events.iter_reversed(_DIALOGUE_KINDS):
             role: str | None = None
             text: object = None
             if event.kind is EventKind.USER_MESSAGE:
